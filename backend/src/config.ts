@@ -3,6 +3,11 @@ import { z } from "zod";
 
 dotenv.config();
 
+const booleanFromEnv = z.preprocess((value) => {
+  if (typeof value !== "string") return value;
+  return ["1", "true", "yes", "on"].includes(value.toLowerCase());
+}, z.boolean());
+
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().default(4000),
@@ -15,7 +20,7 @@ const envSchema = z.object({
   DB_USER: z.string().default("root"),
   DB_PASSWORD: z.string().default(""),
   DB_NAME: z.string().default("digital_business_cards"),
-  DB_SSL: z.coerce.boolean().default(false),
+  DB_SSL: booleanFromEnv.default(false),
   UPLOAD_DIR: z.string().default("uploads"),
   MAX_UPLOAD_MB: z.coerce.number().default(4)
 });
