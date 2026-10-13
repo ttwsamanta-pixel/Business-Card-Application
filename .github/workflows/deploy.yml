@@ -1,0 +1,79 @@
+name: Deploy to Cloudways
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: cloudways-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build application
+        run: npm run build
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.CLOUDWAYS_SSH_KEY }}" > ~/.ssh/cloudways_key
+          chmod 600 ~/.ssh/cloudways_key
+          ssh-keyscan -p "${{ secrets.CLOUDWAYS_SSH_PORT }}" "${{ secrets.CLOUDWAYS_SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Sync files to Cloudways
+        run: |
+          rsync -az --delete \
+            --exclude ".git/" \
+            --exclude ".github/" \
+            --exclude "node_modules/" \
+            --exclude "frontend/node_modules/" \
+            --exclude "backend/node_modules/" \
+            --exclude "digital-business-card-templates/node_modules/" \
+            --exclude "backend/.env" \
+            --exclude "frontend/.env.local" \
+            --exclude "uploads/" \
+            -e "ssh -i ~/.ssh/cloudways_key -p ${{ secrets.CLOUDWAYS_SSH_PORT }}" \
+            ./ "${{ secrets.CLOUDWAYS_SSH_USER }}@${{ secrets.CLOUDWAYS_SSH_HOST }}:${{ secrets.CLOUDWAYS_APP_PATH }}/"
+
+      - name: Install, build, migrate, and restart on Cloudways
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.CLOUDWAYS_SSH_HOST }}
+          username: ${{ secrets.CLOUDWAYS_SSH_USER }}
+          key: ${{ secrets.CLOUDWAYS_SSH_KEY }}
+          port: ${{ secrets.CLOUDWAYS_SSH_PORT }}
+          script_stop: true
+          script: |
+            export NVM_DIR="$HOME/.nvm"
+            . "$NVM_DIR/nvm.sh"
+            nvm use 22
+
+            cd "${{ secrets.CLOUDWAYS_APP_PATH }}"
+            npm ci
+            npm run build
+            npm run db:migrate
+
+            pm2 restart qr-api --update-env || pm2 start backend/dist/server.js --name qr-api --update-env
+            pm2 restart qr-frontend --update-env || pm2 start npm --name qr-frontend -- run start --workspace frontend
+            pm2 save
