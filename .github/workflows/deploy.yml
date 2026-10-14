@@ -58,7 +58,12 @@ jobs:
           PORT="$(printf '%s' "$CLOUDWAYS_SSH_PORT" | tr -d '\r\n' | xargs)"
           USER="$(printf '%s' "$CLOUDWAYS_SSH_USER" | tr -d '\r\n' | xargs)"
           APP_PATH="$(printf '%s' "$CLOUDWAYS_APP_PATH" | tr -d '\r\n' | xargs)"
-          rsync -az --delete \
+          rsync -rltz --delete \
+            --no-times \
+            --omit-dir-times \
+            --no-perms \
+            --no-owner \
+            --no-group \
             --exclude ".git/" \
             --exclude ".github/" \
             --exclude "node_modules/" \
