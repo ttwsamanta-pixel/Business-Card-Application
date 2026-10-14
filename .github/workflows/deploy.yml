@@ -35,14 +35,29 @@ jobs:
         run: npm run build
 
       - name: Configure SSH
+        env:
+          CLOUDWAYS_SSH_HOST: ${{ secrets.CLOUDWAYS_SSH_HOST }}
+          CLOUDWAYS_SSH_PORT: ${{ secrets.CLOUDWAYS_SSH_PORT }}
+          CLOUDWAYS_SSH_KEY: ${{ secrets.CLOUDWAYS_SSH_KEY }}
         run: |
+          HOST="$(printf '%s' "$CLOUDWAYS_SSH_HOST" | tr -d '\r\n' | xargs)"
+          PORT="$(printf '%s' "$CLOUDWAYS_SSH_PORT" | tr -d '\r\n' | xargs)"
           mkdir -p ~/.ssh
-          echo "${{ secrets.CLOUDWAYS_SSH_KEY }}" > ~/.ssh/cloudways_key
+          printf '%s\n' "$CLOUDWAYS_SSH_KEY" > ~/.ssh/cloudways_key
           chmod 600 ~/.ssh/cloudways_key
-          ssh-keyscan -p "${{ secrets.CLOUDWAYS_SSH_PORT }}" "${{ secrets.CLOUDWAYS_SSH_HOST }}" >> ~/.ssh/known_hosts
+          ssh-keyscan -p "$PORT" "$HOST" >> ~/.ssh/known_hosts
 
       - name: Sync files to Cloudways
+        env:
+          CLOUDWAYS_SSH_HOST: ${{ secrets.CLOUDWAYS_SSH_HOST }}
+          CLOUDWAYS_SSH_PORT: ${{ secrets.CLOUDWAYS_SSH_PORT }}
+          CLOUDWAYS_SSH_USER: ${{ secrets.CLOUDWAYS_SSH_USER }}
+          CLOUDWAYS_APP_PATH: ${{ secrets.CLOUDWAYS_APP_PATH }}
         run: |
+          HOST="$(printf '%s' "$CLOUDWAYS_SSH_HOST" | tr -d '\r\n' | xargs)"
+          PORT="$(printf '%s' "$CLOUDWAYS_SSH_PORT" | tr -d '\r\n' | xargs)"
+          USER="$(printf '%s' "$CLOUDWAYS_SSH_USER" | tr -d '\r\n' | xargs)"
+          APP_PATH="$(printf '%s' "$CLOUDWAYS_APP_PATH" | tr -d '\r\n' | xargs)"
           rsync -az --delete \
             --exclude ".git/" \
             --exclude ".github/" \
@@ -53,8 +68,8 @@ jobs:
             --exclude "backend/.env" \
             --exclude "frontend/.env.local" \
             --exclude "uploads/" \
-            -e "ssh -i ~/.ssh/cloudways_key -p ${{ secrets.CLOUDWAYS_SSH_PORT }}" \
-            ./ "${{ secrets.CLOUDWAYS_SSH_USER }}@${{ secrets.CLOUDWAYS_SSH_HOST }}:${{ secrets.CLOUDWAYS_APP_PATH }}/"
+            -e "ssh -i ~/.ssh/cloudways_key -p $PORT" \
+            ./ "$USER@$HOST:$APP_PATH/"
 
       - name: Install, build, migrate, and restart on Cloudways
         uses: appleboy/ssh-action@v1.2.2
