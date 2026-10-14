@@ -12,15 +12,13 @@ export default function TemplatesPage() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
   const [loggedIn, setLoggedIn] = useState(false);
-  const [checkedAuth, setCheckedAuth] = useState(false);
   const categories = ["All", ...Array.from(new Set(templates.map((template) => template.category)))];
   const filtered = useMemo(() => templates.filter((template) => (category === "All" || template.category === category) && `${template.name} ${template.description}`.toLowerCase().includes(query.toLowerCase())), [query, category]);
 
   useEffect(() => {
     endpoints.me()
       .then(() => setLoggedIn(true))
-      .catch(() => setLoggedIn(false))
-      .finally(() => setCheckedAuth(true));
+      .catch(() => setLoggedIn(false));
   }, []);
 
   const content = (
@@ -50,8 +48,6 @@ export default function TemplatesPage() {
       </div>
     </section>
   );
-
-  if (!checkedAuth) return null;
 
   if (loggedIn) {
     return <main className="dashboard-layout"><AppNav/>{content}</main>;
