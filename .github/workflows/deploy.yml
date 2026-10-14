@@ -66,6 +66,7 @@ jobs:
             --no-group \
             --exclude ".git/" \
             --exclude ".github/" \
+            --exclude ".htaccess" \
             --exclude "node_modules/" \
             --exclude "frontend/node_modules/" \
             --exclude "backend/node_modules/" \
