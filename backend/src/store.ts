@@ -10,7 +10,7 @@ export interface Store {
   findUserByEmail(email: string): Promise<User | undefined>;
   findUserById(id: string): Promise<User | undefined>;
   listUsers(): Promise<PublicUser[]>;
-  updateUserProfile(id: string, input: { name: string }): Promise<PublicUser | undefined>;
+  updateUserProfile(id: string, input: { name: string; profileImageUrl?: string }): Promise<PublicUser | undefined>;
   setUserPassword(id: string, passwordHash: string): Promise<boolean>;
   setUserStatus(id: string, status: "active" | "disabled"): Promise<PublicUser | undefined>;
   setUserRole(id: string, role: Role): Promise<PublicUser | undefined>;
@@ -29,7 +29,7 @@ export interface Store {
 }
 
 function publicUser(user: User): PublicUser {
-  return { id: user.id, name: user.name, email: user.email, role: user.role, status: user.status };
+  return { id: user.id, name: user.name, email: user.email, role: user.role, status: user.status, profileImageUrl: user.profileImageUrl };
 }
 
 function tokenHash(token: string) {
@@ -56,6 +56,7 @@ export class MemoryStore implements Store {
       passwordHash: input.passwordHash,
       role: input.role || "user",
       status: input.status || "active",
+      profileImageUrl: "",
       createdAt: new Date().toISOString()
     };
     this.users.set(user.id, user);
@@ -74,10 +75,11 @@ export class MemoryStore implements Store {
     return [...this.users.values()].map(publicUser);
   }
 
-  async updateUserProfile(id: string, input: { name: string }) {
+  async updateUserProfile(id: string, input: { name: string; profileImageUrl?: string }) {
     const user = this.users.get(id);
     if (!user) return undefined;
     user.name = input.name;
+    user.profileImageUrl = input.profileImageUrl || "";
     return publicUser(user);
   }
 
@@ -236,8 +238,8 @@ export class MySqlStore extends MemoryStore {
     return rows.map((row) => publicUser(this.rowToUser(row)));
   }
 
-  async updateUserProfile(id: string, input: { name: string }) {
-    await this.pool.execute("UPDATE users SET name = ? WHERE id = ?", [input.name, id]);
+  async updateUserProfile(id: string, input: { name: string; profileImageUrl?: string }) {
+    await this.pool.execute("UPDATE users SET name = ?, profile_image_url = ? WHERE id = ?", [input.name, input.profileImageUrl || null, id]);
     const user = await this.findUserById(id);
     return user ? publicUser(user) : undefined;
   }
@@ -343,6 +345,7 @@ export class MySqlStore extends MemoryStore {
       passwordHash: row.password_hash,
       role: row.role,
       status: row.status,
+      profileImageUrl: row.profile_image_url || "",
       createdAt: row.created_at?.toISOString?.() || row.created_at
     };
   }

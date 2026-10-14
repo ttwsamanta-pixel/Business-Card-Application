@@ -8,6 +8,7 @@ export type User = {
   passwordHash: string;
   role: Role;
   status: "active" | "disabled";
+  profileImageUrl?: string;
   createdAt: string;
 };
 
@@ -42,7 +43,7 @@ export type BusinessCard = {
   updatedAt: string;
 };
 
-export type PublicUser = Pick<User, "id" | "name" | "email" | "role" | "status">;
+export type PublicUser = Pick<User, "id" | "name" | "email" | "role" | "status" | "profileImageUrl">;
 
 declare global {
   namespace Express {

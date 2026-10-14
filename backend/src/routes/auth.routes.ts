@@ -45,7 +45,7 @@ authRouter.get("/me", authenticate, (req, res) => ok(res, { user: req.user }));
 
 authRouter.patch("/me", authenticate, async (req, res) => {
   const body = profileUpdateSchema.parse(req.body);
-  const user = await store.updateUserProfile(req.user!.id, { name: body.name });
+  const user = await store.updateUserProfile(req.user!.id, { name: body.name, profileImageUrl: body.profileImageUrl });
   if (!user) return fail(res, 404, "User not found");
   return ok(res, { user });
 });

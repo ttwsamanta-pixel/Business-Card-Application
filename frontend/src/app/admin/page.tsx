@@ -93,13 +93,15 @@ export default function AdminPage() {
       <section className="main">
         <div className="toolbar">
           <div>
-            <h1>Super Admin</h1>
+            <h1>Users</h1>
             <p>Create user accounts, control access, and manage template availability.</p>
           </div>
         </div>
 
         {error ? <div className="error">{error}</div> : null}
         {message ? <div className="success">{message}</div> : null}
+        {error === "Administrator access required" ? null : (
+          <>
 
         {overview ? (
           <div className="stat-grid">
@@ -160,6 +162,8 @@ export default function AdminPage() {
             ))}
           </div>
         </section>
+          </>
+        )}
       </section>
     </main>
   );

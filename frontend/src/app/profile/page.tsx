@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AppNav } from "@/components/AppNav";
-import { endpoints } from "@/lib/api";
+import { endpoints, uploadImage } from "@/lib/api";
 
 type User = {
   id: string;
@@ -10,11 +10,13 @@ type User = {
   email: string;
   role: string;
   status: string;
+  profileImageUrl?: string;
 };
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User>();
   const [name, setName] = useState("");
+  const [profileImageUrl, setProfileImageUrl] = useState("");
   const [passwords, setPasswords] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -24,6 +26,7 @@ export default function ProfilePage() {
       .then((res) => {
         setUser(res.user);
         setName(res.user.name);
+        setProfileImageUrl(res.user.profileImageUrl || "");
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Profile failed to load"));
   }, []);
@@ -33,11 +36,24 @@ export default function ProfilePage() {
     try {
       setError("");
       setMessage("");
-      const res = await endpoints.updateMe({ name });
+      const res = await endpoints.updateMe({ name, profileImageUrl });
       setUser(res.user);
       setMessage("Profile updated.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Profile update failed");
+    }
+  };
+
+  const uploadProfileImage = async (file?: File) => {
+    if (!file) return;
+    try {
+      setError("");
+      setMessage("");
+      const uploaded = await uploadImage(file);
+      setProfileImageUrl(uploaded.publicUrl);
+      setMessage("Profile photo uploaded. Click Save profile to keep it.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Profile photo upload failed");
     }
   };
 
@@ -76,8 +92,12 @@ export default function ProfilePage() {
         {message ? <div className="success">{message}</div> : null}
 
         <div className="profile-grid">
-          <form className="panel" onSubmit={saveProfile}>
-            <h2>Account</h2>
+          <form className="panel" id="profile" onSubmit={saveProfile}>
+            <h2>Update Profile</h2>
+            <div className="profile-photo-row">
+              {profileImageUrl ? <img src={profileImageUrl} alt=""/> : <span>{(name || "U").slice(0, 1).toUpperCase()}</span>}
+              <label className="btn secondary">Upload photo<input type="file" accept="image/*" hidden onChange={(e)=>uploadProfileImage(e.target.files?.[0])}/></label>
+            </div>
             <div className="form-grid">
               <label className="field">Name<input className="input" value={name} onChange={(e)=>setName(e.target.value)}/></label>
               <label className="field">Email<input className="input" value={user?.email || ""} disabled/></label>
@@ -87,7 +107,7 @@ export default function ProfilePage() {
             <button className="btn" style={{marginTop:16}}>Save profile</button>
           </form>
 
-          <form className="panel" onSubmit={changePassword}>
+          <form className="panel" id="password" onSubmit={changePassword}>
             <h2>Change Password</h2>
             <div className="form-grid">
               <label className="field">Current password<input className="input" type="password" value={passwords.currentPassword} onChange={(e)=>setPasswords({...passwords, currentPassword: e.target.value})}/></label>

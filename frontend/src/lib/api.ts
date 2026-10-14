@@ -33,13 +33,28 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   return json.data;
 }
 
+export async function uploadImage(file: File): Promise<{ publicUrl: string }> {
+  const token = getToken();
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${API_BASE}/uploads`, {
+    method: "POST",
+    credentials: "include",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form
+  });
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error.message);
+  return json.data;
+}
+
 export const endpoints = {
   login: (body: { email: string; password: string }) => api<{ token: string; user: any }>("/auth/login", { method: "POST", body: JSON.stringify(body) }),
   register: (body: { name: string; email: string; password: string }) => api<{ token: string; user: any }>("/auth/register", { method: "POST", body: JSON.stringify(body) }),
   forgot: (email: string) => api<{ message: string; devToken?: string }>("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email }) }),
   reset: (token: string, password: string) => api<{ changed: boolean }>("/auth/reset-password", { method: "POST", body: JSON.stringify({ token, password }) }),
   me: () => api<{ user: any }>("/auth/me"),
-  updateMe: (body: { name: string }) => api<{ user: any }>("/auth/me", { method: "PATCH", body: JSON.stringify(body) }),
+  updateMe: (body: { name: string; profileImageUrl?: string }) => api<{ user: any }>("/auth/me", { method: "PATCH", body: JSON.stringify(body) }),
   changePassword: (body: { currentPassword: string; newPassword: string }) => api<{ changed: boolean }>("/auth/change-password", { method: "POST", body: JSON.stringify(body) }),
   cards: () => api<CardProfile[]>("/cards"),
   card: (id: string) => api<CardProfile>(`/cards/${id}`),

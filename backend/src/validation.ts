@@ -29,7 +29,8 @@ export const resetPasswordSchema = z.object({
 });
 
 export const profileUpdateSchema = z.object({
-  name: z.string().trim().min(2).max(160)
+  name: z.string().trim().min(2).max(160),
+  profileImageUrl: url
 });
 
 export const changePasswordSchema = z.object({
