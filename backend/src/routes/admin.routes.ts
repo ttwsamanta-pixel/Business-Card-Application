@@ -47,6 +47,7 @@ adminRouter.post("/users", async (req, res, next) => {
 adminRouter.patch("/users/:id/status", async (req, res) => {
   const status = req.body.status;
   if (!["active", "disabled"].includes(status)) return fail(res, 422, "Status must be active or disabled");
+  if (req.params.id === req.user!.id && status === "disabled") return fail(res, 400, "You cannot disable your own account");
   const user = await store.setUserStatus(req.params.id, status);
   if (!user) return fail(res, 404, "User not found");
   return ok(res, user);
@@ -55,9 +56,17 @@ adminRouter.patch("/users/:id/status", async (req, res) => {
 adminRouter.patch("/users/:id/role", async (req, res) => {
   const role = req.body.role;
   if (!["user", "admin"].includes(role)) return fail(res, 422, "Role must be user or admin");
+  if (req.params.id === req.user!.id && role !== "admin") return fail(res, 400, "You cannot remove your own admin role");
   const user = await store.setUserRole(req.params.id, role);
   if (!user) return fail(res, 404, "User not found");
   return ok(res, user);
+});
+
+adminRouter.delete("/users/:id", async (req, res) => {
+  if (req.params.id === req.user!.id) return fail(res, 400, "You cannot delete your own account");
+  const deleted = await store.deleteUser(req.params.id);
+  if (!deleted) return fail(res, 404, "User not found");
+  return ok(res, { deleted: true });
 });
 
 adminRouter.get("/cards", async (_req, res) => ok(res, await store.listAllCards()));

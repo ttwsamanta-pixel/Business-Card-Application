@@ -10,8 +10,11 @@ export interface Store {
   findUserByEmail(email: string): Promise<User | undefined>;
   findUserById(id: string): Promise<User | undefined>;
   listUsers(): Promise<PublicUser[]>;
+  updateUserProfile(id: string, input: { name: string }): Promise<PublicUser | undefined>;
+  setUserPassword(id: string, passwordHash: string): Promise<boolean>;
   setUserStatus(id: string, status: "active" | "disabled"): Promise<PublicUser | undefined>;
   setUserRole(id: string, role: Role): Promise<PublicUser | undefined>;
+  deleteUser(id: string): Promise<boolean>;
   createPasswordReset(userId: string, token: string, expiresAt: Date): Promise<void>;
   consumePasswordReset(token: string, passwordHash: string): Promise<boolean>;
   createCard(userId: string, data: Partial<BusinessCard>): Promise<BusinessCard>;
@@ -71,6 +74,20 @@ export class MemoryStore implements Store {
     return [...this.users.values()].map(publicUser);
   }
 
+  async updateUserProfile(id: string, input: { name: string }) {
+    const user = this.users.get(id);
+    if (!user) return undefined;
+    user.name = input.name;
+    return publicUser(user);
+  }
+
+  async setUserPassword(id: string, passwordHash: string) {
+    const user = this.users.get(id);
+    if (!user) return false;
+    user.passwordHash = passwordHash;
+    return true;
+  }
+
   async setUserStatus(id: string, status: "active" | "disabled") {
     const user = this.users.get(id);
     if (!user) return undefined;
@@ -83,6 +100,10 @@ export class MemoryStore implements Store {
     if (!user) return undefined;
     user.role = role;
     return publicUser(user);
+  }
+
+  async deleteUser(id: string) {
+    return this.users.delete(id);
   }
 
   async createPasswordReset(userId: string, token: string, expiresAt: Date) {
@@ -215,6 +236,17 @@ export class MySqlStore extends MemoryStore {
     return rows.map((row) => publicUser(this.rowToUser(row)));
   }
 
+  async updateUserProfile(id: string, input: { name: string }) {
+    await this.pool.execute("UPDATE users SET name = ? WHERE id = ?", [input.name, id]);
+    const user = await this.findUserById(id);
+    return user ? publicUser(user) : undefined;
+  }
+
+  async setUserPassword(id: string, passwordHash: string) {
+    const [result] = await this.pool.execute<mysql.ResultSetHeader>("UPDATE users SET password_hash = ? WHERE id = ?", [passwordHash, id]);
+    return result.affectedRows > 0;
+  }
+
   async setUserStatus(id: string, status: "active" | "disabled") {
     await this.pool.execute("UPDATE users SET status = ? WHERE id = ?", [status, id]);
     const user = await this.findUserById(id);
@@ -225,6 +257,11 @@ export class MySqlStore extends MemoryStore {
     await this.pool.execute("UPDATE users SET role = ? WHERE id = ?", [role, id]);
     const user = await this.findUserById(id);
     return user ? publicUser(user) : undefined;
+  }
+
+  async deleteUser(id: string) {
+    const [result] = await this.pool.execute<mysql.ResultSetHeader>("DELETE FROM users WHERE id = ?", [id]);
+    return result.affectedRows > 0;
   }
 
   async createPasswordReset(userId: string, token: string, expiresAt: Date) {

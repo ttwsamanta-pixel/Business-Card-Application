@@ -39,6 +39,8 @@ export const endpoints = {
   forgot: (email: string) => api<{ message: string; devToken?: string }>("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email }) }),
   reset: (token: string, password: string) => api<{ changed: boolean }>("/auth/reset-password", { method: "POST", body: JSON.stringify({ token, password }) }),
   me: () => api<{ user: any }>("/auth/me"),
+  updateMe: (body: { name: string }) => api<{ user: any }>("/auth/me", { method: "PATCH", body: JSON.stringify(body) }),
+  changePassword: (body: { currentPassword: string; newPassword: string }) => api<{ changed: boolean }>("/auth/change-password", { method: "POST", body: JSON.stringify(body) }),
   cards: () => api<CardProfile[]>("/cards"),
   card: (id: string) => api<CardProfile>(`/cards/${id}`),
   createCard: (card: CardProfile) => api<CardProfile>("/cards", { method: "POST", body: JSON.stringify(card) }),
@@ -53,6 +55,7 @@ export const endpoints = {
   adminCreateUser: (body: { name: string; email: string; password: string; role: "user" | "admin"; status: "active" | "disabled" }) => api<any>("/admin/users", { method: "POST", body: JSON.stringify(body) }),
   adminSetUserStatus: (id: string, status: "active" | "disabled") => api<any>(`/admin/users/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
   adminSetUserRole: (id: string, role: "user" | "admin") => api<any>(`/admin/users/${id}/role`, { method: "PATCH", body: JSON.stringify({ role }) }),
+  adminDeleteUser: (id: string) => api<{ deleted: boolean }>(`/admin/users/${id}`, { method: "DELETE" }),
   adminTemplates: () => api<any[]>("/admin/templates"),
   adminSetTemplate: (id: string, active: boolean) => api(`/admin/templates/${id}`, { method: "PATCH", body: JSON.stringify({ active }) })
 };

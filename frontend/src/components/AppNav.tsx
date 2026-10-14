@@ -10,6 +10,7 @@ export function AppNav() {
       <Link href="/dashboard">Dashboard</Link>
       <Link href="/templates">Templates</Link>
       <Link href="/editor/new">Create Card</Link>
+      <Link href="/profile">My Profile</Link>
       <Link href="/admin">Admin</Link>
       <button className="btn secondary" onClick={() => { clearToken(); location.href = "/login"; }}>Logout</button>
     </aside>

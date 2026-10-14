@@ -80,6 +80,13 @@ export default function AdminPage() {
     await load();
   };
 
+  const deleteUser = async (user: ManagedUser) => {
+    if (!confirm(`Delete ${user.name}? This also removes their cards and cannot be undone.`)) return;
+    await endpoints.adminDeleteUser(user.id);
+    setMessage(`${user.name} was deleted.`);
+    await load();
+  };
+
   return (
     <main className="dashboard-layout">
       <AppNav/>
@@ -121,7 +128,7 @@ export default function AdminPage() {
               <input className="input" style={{maxWidth:260}} placeholder="Search users" value={query} onChange={(e)=>setQuery(e.target.value)}/>
             </div>
             <div className="admin-table">
-              <div className="admin-row admin-head"><span>User</span><span>Role</span><span>Status</span></div>
+              <div className="admin-row admin-head"><span>User</span><span>Role</span><span>Status</span><span>Action</span></div>
               {filteredUsers.map((user) => (
                 <div className="admin-row" key={user.id}>
                   <span><strong>{user.name}</strong><small>{user.email}</small></span>
@@ -133,6 +140,7 @@ export default function AdminPage() {
                     <option value="active">Active</option>
                     <option value="disabled">Disabled</option>
                   </select>
+                  <button className="btn danger" onClick={()=>deleteUser(user)}>Delete</button>
                 </div>
               ))}
             </div>

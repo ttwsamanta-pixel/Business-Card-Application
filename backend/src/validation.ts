@@ -28,6 +28,15 @@ export const resetPasswordSchema = z.object({
   password: z.string().min(8).max(128)
 });
 
+export const profileUpdateSchema = z.object({
+  name: z.string().trim().min(2).max(160)
+});
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8).max(128)
+});
+
 export const socialLinkSchema = z.object({
   id: z.string().optional(),
   platform: z.string().trim().min(1).max(80),

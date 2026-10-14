@@ -5,7 +5,7 @@ import { z } from "zod";
 import { isProduction } from "../config.js";
 import { authenticate, signUserToken } from "../middleware/auth.js";
 import { store } from "../store.js";
-import { forgotPasswordSchema, loginSchema, registerSchema, resetPasswordSchema } from "../validation.js";
+import { changePasswordSchema, forgotPasswordSchema, loginSchema, profileUpdateSchema, registerSchema, resetPasswordSchema } from "../validation.js";
 import { fail, ok } from "../utils/http.js";
 
 export const authRouter = Router();
@@ -42,6 +42,24 @@ authRouter.post("/logout", (_req, res) => {
 });
 
 authRouter.get("/me", authenticate, (req, res) => ok(res, { user: req.user }));
+
+authRouter.patch("/me", authenticate, async (req, res) => {
+  const body = profileUpdateSchema.parse(req.body);
+  const user = await store.updateUserProfile(req.user!.id, { name: body.name });
+  if (!user) return fail(res, 404, "User not found");
+  return ok(res, { user });
+});
+
+authRouter.post("/change-password", authenticate, async (req, res) => {
+  const body = changePasswordSchema.parse(req.body);
+  const user = await store.findUserById(req.user!.id);
+  if (!user) return fail(res, 404, "User not found");
+  const valid = await bcrypt.compare(body.currentPassword, user.passwordHash);
+  if (!valid) return fail(res, 400, "Current password is incorrect");
+  const passwordHash = await bcrypt.hash(body.newPassword, 12);
+  await store.setUserPassword(user.id, passwordHash);
+  return ok(res, { changed: true });
+});
 
 authRouter.post("/forgot-password", async (req, res) => {
   const body = forgotPasswordSchema.parse(req.body);
