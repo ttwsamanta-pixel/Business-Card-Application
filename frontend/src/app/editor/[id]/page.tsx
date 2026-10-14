@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppNav } from "@/components/AppNav";
 import { CardRenderer } from "@/components/CardRenderer";
 import { endpoints, publicApiAsset, publicCardUrl } from "@/lib/api";
 import { emptyCard, templates, type CardProfile } from "@/lib/templates";
-import { Briefcase, ChevronRight, Contact, Copy, ExternalLink, Eye, FileText, Globe2, Grid3X3, ImageIcon, Link2, QrCode, Save } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, ExternalLink, Eye, Grid3X3, ImageIcon, QrCode, Save } from "lucide-react";
 
-const qrTypes = ["URL", "Digital Business Cards", "GS1 QR Code", "Product QR Code", "Multi-URL", "Form QR Code", "PDF to QR Code", "More"];
 const colorSwatches = ["#4f7cff","#243b85","#e91e63","#ff8a00","#967040","#46adb5","#09539b","#ff315f","#7b4a30","#ffd21f","#4ade80","#a3c76d","#253cff","#ef4444","#080808","#22c55e","#f7c948"];
 const backgrounds = ["#f8fafc","#dbeafe","#fee2e2","#fef3c7","#dcfce7","#f3e8ff","#111827","#fb7185","#38bdf8","#f97316","#facc15","#a78bfa"];
 const fonts = ["Default","Work Sans","Open Sans","Roboto","Playfair Display","Josefin Sans","Lato","Concert One","Krona One","Syne","Federo","Courier New","Poppins","Montserrat","Mukta","DM Sans"];
@@ -24,6 +23,7 @@ export default function EditorPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [card, setCard] = useState<CardProfile>({...emptyCard, socialLinks: [...emptyCard.socialLinks]});
+  const templateScroller = useRef<HTMLDivElement>(null);
   const isNew = params.id === "new";
 
   useEffect(() => {
@@ -52,6 +52,9 @@ export default function EditorPage() {
   };
 
   const addSocial = () => set({ socialLinks: [...(card.socialLinks || []), { platform: "LinkedIn", url: "https://" }] });
+  const scrollTemplates = (direction: number) => {
+    templateScroller.current?.scrollBy({ left: direction * 260, behavior: "smooth" });
+  };
 
   return (
     <main className="dashboard-layout maker-dashboard">
@@ -66,15 +69,6 @@ export default function EditorPage() {
         {message ? <div className="success">{message}</div> : null}
 
         <div className="maker-shell">
-          <aside className="maker-types">
-            {qrTypes.map((item, index) => (
-              <button className={item === "Digital Business Cards" ? "active" : ""} key={item}>
-                {index === 0 ? <Globe2 size={18}/> : index === 1 ? <Contact size={18}/> : index === 2 ? <QrCode size={18}/> : index === 3 ? <Briefcase size={18}/> : index === 4 ? <Link2 size={18}/> : <FileText size={18}/>}
-                {item}
-              </button>
-            ))}
-          </aside>
-
           <div className="maker-center">
             <div className="maker-title-row">
               <h2>Digital Business Card Maker</h2>
@@ -90,7 +84,11 @@ export default function EditorPage() {
               {step === 1 ? (
                 <>
                   <Section title="Page Template">
-                    <div className="template-picker">{templates.slice(0, 8).map((template) => <button className={card.templateId === template.id ? "active" : ""} key={template.id} onClick={()=>set({templateId: template.id})}><CardRenderer compact card={{...card, templateId: template.id}}/><span>{template.name}</span></button>)}</div>
+                    <div className="template-carousel">
+                      <button className="template-nav" type="button" aria-label="Previous templates" onClick={()=>scrollTemplates(-1)}><ChevronLeft size={20}/></button>
+                      <div className="template-picker" ref={templateScroller}>{templates.map((template) => <button className={card.templateId === template.id ? "active" : ""} key={template.id} onClick={()=>set({templateId: template.id})}><CardRenderer compact card={{...card, templateId: template.id}}/><span>{template.name}</span></button>)}</div>
+                      <button className="template-nav" type="button" aria-label="Next templates" onClick={()=>scrollTemplates(1)}><ChevronRight size={20}/></button>
+                    </div>
                   </Section>
                   <Section title="Profile">
                     <div className="form-grid">
