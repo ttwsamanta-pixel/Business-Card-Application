@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, KeyRound } from "lucide-react";
 import { clearToken, endpoints } from "@/lib/api";
 
 type User = {
@@ -60,13 +60,21 @@ export function AppNav() {
         <div className="profile-menu">
           <button className="profile-trigger" onClick={() => setOpen(!open)} aria-expanded={open}>
             {user?.profileImageUrl ? <img src={user.profileImageUrl} alt=""/> : <span>{initials(user?.name)}</span>}
+            <strong>{user?.name || "Profile"}</strong>
             <ChevronDown size={16}/>
           </button>
           {open ? (
             <div className="profile-dropdown">
-              <Link href="/profile" onClick={() => setOpen(false)}>Update profile</Link>
-              <Link href="/change-password" onClick={() => setOpen(false)}>Change password</Link>
-              <button onClick={logout}>Logout</button>
+              <div className="profile-card-top">
+                {user?.profileImageUrl ? <img src={user.profileImageUrl} alt=""/> : <span>{initials(user?.name)}</span>}
+                <strong>{user?.name || "User"}</strong>
+                <small>{user?.role || "Member"}</small>
+              </div>
+              <Link className="profile-password-link" href="/change-password" onClick={() => setOpen(false)}><KeyRound size={15}/> Change password</Link>
+              <div className="profile-card-actions">
+                <Link href="/profile" onClick={() => setOpen(false)}>Update</Link>
+                <button onClick={logout}>Sign out</button>
+              </div>
             </div>
           ) : null}
         </div>
