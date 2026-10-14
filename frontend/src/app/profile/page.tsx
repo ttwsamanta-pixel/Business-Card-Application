@@ -17,7 +17,6 @@ export default function ProfilePage() {
   const [user, setUser] = useState<User>();
   const [name, setName] = useState("");
   const [profileImageUrl, setProfileImageUrl] = useState("");
-  const [passwords, setPasswords] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -57,42 +56,22 @@ export default function ProfilePage() {
     }
   };
 
-  const changePassword = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (passwords.newPassword !== passwords.confirmPassword) {
-      setError("New password and confirmation do not match");
-      return;
-    }
-    try {
-      setError("");
-      setMessage("");
-      await endpoints.changePassword({
-        currentPassword: passwords.currentPassword,
-        newPassword: passwords.newPassword
-      });
-      setPasswords({ currentPassword: "", newPassword: "", confirmPassword: "" });
-      setMessage("Password updated.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Password update failed");
-    }
-  };
-
   return (
     <main className="dashboard-layout">
       <AppNav/>
       <section className="main">
         <div className="toolbar">
           <div>
-            <h1>My Profile</h1>
-            <p>Manage your account details and password.</p>
+            <h1>Update Profile</h1>
+            <p>Manage your account details and profile photo.</p>
           </div>
         </div>
 
         {error ? <div className="error">{error}</div> : null}
         {message ? <div className="success">{message}</div> : null}
 
-        <div className="profile-grid">
-          <form className="panel" id="profile" onSubmit={saveProfile}>
+        <div className="profile-grid single">
+          <form className="panel" onSubmit={saveProfile}>
             <h2>Update Profile</h2>
             <div className="profile-photo-row">
               {profileImageUrl ? <img src={profileImageUrl} alt=""/> : <span>{(name || "U").slice(0, 1).toUpperCase()}</span>}
@@ -105,16 +84,6 @@ export default function ProfilePage() {
               <label className="field">Status<input className="input" value={user?.status || ""} disabled/></label>
             </div>
             <button className="btn" style={{marginTop:16}}>Save profile</button>
-          </form>
-
-          <form className="panel" id="password" onSubmit={changePassword}>
-            <h2>Change Password</h2>
-            <div className="form-grid">
-              <label className="field">Current password<input className="input" type="password" value={passwords.currentPassword} onChange={(e)=>setPasswords({...passwords, currentPassword: e.target.value})}/></label>
-              <label className="field">New password<input className="input" type="password" value={passwords.newPassword} onChange={(e)=>setPasswords({...passwords, newPassword: e.target.value})}/></label>
-              <label className="field">Confirm new password<input className="input" type="password" value={passwords.confirmPassword} onChange={(e)=>setPasswords({...passwords, confirmPassword: e.target.value})}/></label>
-            </div>
-            <button className="btn" style={{marginTop:16}}>Update password</button>
           </form>
         </div>
       </section>

@@ -7,7 +7,7 @@ export default function LandingPage() {
   return (
     <main className="shell">
       <nav className="nav">
-        <Link href="/" className="brand"><span className="brand-mark">C</span>CardStudio</Link>
+        <Link href="/" className="brand"><img src="/TTW-Logo.png" alt="" className="brand-logo"/>TTW card studio</Link>
         <div className="nav-links">
           <Link href="/templates">Templates</Link>
           <Link href="/login">Login</Link>
@@ -35,7 +35,7 @@ export default function LandingPage() {
           return <div className="panel" key={String(title)}><C color="#305cff"/><h3>{String(title)}</h3><p>Build, preview, publish, and update cards without reprinting anything.</p></div>;
         })}
       </section>
-      <footer className="page" style={{display:"flex",justifyContent:"space-between",gap:16,flexWrap:"wrap",color:"#667085"}}><span>CardStudio SaaS</span><span>Privacy · Terms · Contact</span></footer>
+      <footer className="page" style={{display:"flex",justifyContent:"space-between",gap:16,flexWrap:"wrap",color:"#667085"}}><span>TTW card studio</span><span>Privacy | Terms | Contact</span></footer>
     </main>
   );
 }

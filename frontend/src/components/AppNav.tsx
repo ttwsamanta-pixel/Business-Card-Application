@@ -64,8 +64,8 @@ export function AppNav() {
           </button>
           {open ? (
             <div className="profile-dropdown">
-              <Link href="/profile#profile" onClick={() => setOpen(false)}>Update profile</Link>
-              <Link href="/profile#password" onClick={() => setOpen(false)}>Change password</Link>
+              <Link href="/profile" onClick={() => setOpen(false)}>Update profile</Link>
+              <Link href="/change-password" onClick={() => setOpen(false)}>Change password</Link>
               <button onClick={logout}>Logout</button>
             </div>
           ) : null}

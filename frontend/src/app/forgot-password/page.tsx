@@ -12,5 +12,5 @@ export default function ForgotPasswordPage() {
     const res = await endpoints.forgot(email);
     setMessage(`${res.message}${res.devToken ? ` Dev token: ${res.devToken}` : ""}`);
   };
-  return <main className="shell"><nav className="nav"><Link href="/" className="brand"><span className="brand-mark">C</span>CardStudio</Link></nav><div className="auth-wrap"><form className="auth-card" onSubmit={submit}><h1>Reset password</h1>{message ? <div className="success">{message}</div> : null}<label className="field">Email<input className="input" value={email} onChange={(e)=>setEmail(e.target.value)} /></label><button className="btn" style={{width:"100%"}}>Send reset link</button><p><Link href="/login">Back to login</Link></p></form></div></main>;
+  return <main className="shell"><nav className="nav"><Link href="/" className="brand"><img src="/TTW-Logo.png" alt="" className="brand-logo"/>TTW card studio</Link></nav><div className="auth-wrap"><form className="auth-card" onSubmit={submit}><h1>Reset password</h1>{message ? <div className="success">{message}</div> : null}<label className="field">Email<input className="input" value={email} onChange={(e)=>setEmail(e.target.value)} /></label><button className="btn" style={{width:"100%"}}>Send reset link</button><p><Link href="/login">Back to login</Link></p></form></div></main>;
 }

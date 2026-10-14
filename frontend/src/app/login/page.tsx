@@ -14,10 +14,10 @@ export default function LoginPage() {
     try {
       const res = await endpoints.login({ email, password });
       setToken(res.token);
-      location.href = "/dashboard";
+      location.href = new URLSearchParams(location.search).get("next") || "/dashboard";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     }
   };
-  return <main className="shell"><nav className="nav"><Link href="/" className="brand"><span className="brand-mark">C</span>CardStudio</Link></nav><div className="auth-wrap"><form className="auth-card" onSubmit={submit}><h1>Login</h1><p>Access is managed by the super admin.</p>{error ? <div className="error">{error}</div> : null}<label className="field">Email<input className="input" value={email} onChange={(e)=>setEmail(e.target.value)} /></label><label className="field">Password<input className="input" type="password" value={password} onChange={(e)=>setPassword(e.target.value)} /></label><button className="btn" style={{width:"100%"}}>Login</button><p><Link href="/forgot-password">Forgot password?</Link></p></form></div></main>;
+  return <main className="shell"><nav className="nav"><Link href="/" className="brand"><img src="/TTW-Logo.png" alt="" className="brand-logo"/>TTW card studio</Link></nav><div className="auth-wrap"><form className="auth-card" onSubmit={submit}><h1>Login</h1><p>Access is managed by the super admin.</p>{error ? <div className="error">{error}</div> : null}<label className="field">Email<input className="input" value={email} onChange={(e)=>setEmail(e.target.value)} /></label><label className="field">Password<input className="input" type="password" value={password} onChange={(e)=>setPassword(e.target.value)} /></label><button className="btn" style={{width:"100%"}}>Login</button><p><Link href="/forgot-password">Forgot password?</Link></p></form></div></main>;
 }
