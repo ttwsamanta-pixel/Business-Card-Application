@@ -50,6 +50,9 @@ export const endpoints = {
   publicCard: (slug: string) => api<CardProfile>(`/public/cards/${slug}`),
   adminOverview: () => api<any>("/admin/overview"),
   adminUsers: () => api<any[]>("/admin/users"),
+  adminCreateUser: (body: { name: string; email: string; password: string; role: "user" | "admin"; status: "active" | "disabled" }) => api<any>("/admin/users", { method: "POST", body: JSON.stringify(body) }),
+  adminSetUserStatus: (id: string, status: "active" | "disabled") => api<any>(`/admin/users/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  adminSetUserRole: (id: string, role: "user" | "admin") => api<any>(`/admin/users/${id}/role`, { method: "PATCH", body: JSON.stringify({ role }) }),
   adminTemplates: () => api<any[]>("/admin/templates"),
   adminSetTemplate: (id: string, active: boolean) => api(`/admin/templates/${id}`, { method: "PATCH", body: JSON.stringify({ active }) })
 };

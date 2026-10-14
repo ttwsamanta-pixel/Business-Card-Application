@@ -11,7 +11,7 @@ export default function LandingPage() {
         <div className="nav-links">
           <Link href="/templates">Templates</Link>
           <Link href="/login">Login</Link>
-          <Link href="/register" className="btn">Create card <ArrowRight size={16}/></Link>
+          <Link href="/login" className="btn">Dashboard <ArrowRight size={16}/></Link>
         </div>
       </nav>
       <section className="page hero">
@@ -19,7 +19,7 @@ export default function LandingPage() {
           <h1>Digital business cards that are ready to share.</h1>
           <p>Create polished QR-enabled public profiles, manage multiple cards, and keep every contact detail current from one dashboard.</p>
           <div className="hero-actions">
-            <Link className="btn" href="/register">Start free <ArrowRight size={16}/></Link>
+            <Link className="btn" href="/login">Login <ArrowRight size={16}/></Link>
             <Link className="btn secondary" href="/templates">View templates</Link>
           </div>
         </div>

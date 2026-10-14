@@ -2,15 +2,16 @@ import { randomUUID, createHash } from "crypto";
 import mysql from "mysql2/promise";
 import { config } from "./config.js";
 import { templates } from "./templates.js";
-import type { BusinessCard, PublicUser, SocialLink, User } from "./types.js";
+import type { BusinessCard, PublicUser, Role, SocialLink, User } from "./types.js";
 import { uniqueSlug } from "./utils/slug.js";
 
 export interface Store {
-  createUser(input: { name: string; email: string; passwordHash: string; role?: "user" | "admin" }): Promise<PublicUser>;
+  createUser(input: { name: string; email: string; passwordHash: string; role?: Role; status?: "active" | "disabled" }): Promise<PublicUser>;
   findUserByEmail(email: string): Promise<User | undefined>;
   findUserById(id: string): Promise<User | undefined>;
   listUsers(): Promise<PublicUser[]>;
   setUserStatus(id: string, status: "active" | "disabled"): Promise<PublicUser | undefined>;
+  setUserRole(id: string, role: Role): Promise<PublicUser | undefined>;
   createPasswordReset(userId: string, token: string, expiresAt: Date): Promise<void>;
   consumePasswordReset(token: string, passwordHash: string): Promise<boolean>;
   createCard(userId: string, data: Partial<BusinessCard>): Promise<BusinessCard>;
@@ -41,7 +42,7 @@ export class MemoryStore implements Store {
   private cards = new Map<string, BusinessCard>();
   private resets = new Map<string, { userId: string; expiresAt: Date; used: boolean }>();
 
-  async createUser(input: { name: string; email: string; passwordHash: string; role?: "user" | "admin" }) {
+  async createUser(input: { name: string; email: string; passwordHash: string; role?: Role; status?: "active" | "disabled" }) {
     if ([...this.users.values()].some((user) => user.email.toLowerCase() === input.email.toLowerCase())) {
       throw new Error("Email already registered");
     }
@@ -51,7 +52,7 @@ export class MemoryStore implements Store {
       email: input.email.toLowerCase(),
       passwordHash: input.passwordHash,
       role: input.role || "user",
-      status: "active",
+      status: input.status || "active",
       createdAt: new Date().toISOString()
     };
     this.users.set(user.id, user);
@@ -74,6 +75,13 @@ export class MemoryStore implements Store {
     const user = this.users.get(id);
     if (!user) return undefined;
     user.status = status;
+    return publicUser(user);
+  }
+
+  async setUserRole(id: string, role: Role) {
+    const user = this.users.get(id);
+    if (!user) return undefined;
+    user.role = role;
     return publicUser(user);
   }
 
@@ -182,11 +190,11 @@ export class MySqlStore extends MemoryStore {
     connectionLimit: 10
   });
 
-  async createUser(input: { name: string; email: string; passwordHash: string; role?: "user" | "admin" }) {
+  async createUser(input: { name: string; email: string; passwordHash: string; role?: Role; status?: "active" | "disabled" }) {
     const id = randomUUID();
     await this.pool.execute(
-      "INSERT INTO users (id, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)",
-      [id, input.name, input.email.toLowerCase(), input.passwordHash, input.role || "user"]
+      "INSERT INTO users (id, name, email, password_hash, role, status) VALUES (?, ?, ?, ?, ?, ?)",
+      [id, input.name, input.email.toLowerCase(), input.passwordHash, input.role || "user", input.status || "active"]
     );
     const user = await this.findUserById(id);
     return publicUser(user!);
@@ -209,6 +217,12 @@ export class MySqlStore extends MemoryStore {
 
   async setUserStatus(id: string, status: "active" | "disabled") {
     await this.pool.execute("UPDATE users SET status = ? WHERE id = ?", [status, id]);
+    const user = await this.findUserById(id);
+    return user ? publicUser(user) : undefined;
+  }
+
+  async setUserRole(id: string, role: Role) {
+    await this.pool.execute("UPDATE users SET role = ? WHERE id = ?", [role, id]);
     const user = await this.findUserById(id);
     return user ? publicUser(user) : undefined;
   }

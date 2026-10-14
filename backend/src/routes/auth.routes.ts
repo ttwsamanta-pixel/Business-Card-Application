@@ -12,6 +12,7 @@ export const authRouter = Router();
 
 authRouter.post("/register", async (req, res, next) => {
   try {
+    if (isProduction) return fail(res, 403, "Registration is closed. Please contact the administrator for access.");
     const body = registerSchema.parse(req.body);
     const passwordHash = await bcrypt.hash(body.password, 12);
     const user = await store.createUser({ name: body.name, email: body.email, passwordHash });

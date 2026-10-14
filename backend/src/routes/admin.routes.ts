@@ -1,7 +1,10 @@
 import { Router } from "express";
+import bcrypt from "bcryptjs";
+import { z } from "zod";
 import { authenticate, requireAdmin } from "../middleware/auth.js";
 import { store } from "../store.js";
 import { templates } from "../templates.js";
+import { adminCreateUserSchema } from "../validation.js";
 import { ok, fail } from "../utils/http.js";
 
 export const adminRouter = Router();
@@ -23,10 +26,36 @@ adminRouter.get("/overview", async (_req, res) => {
 
 adminRouter.get("/users", async (_req, res) => ok(res, await store.listUsers()));
 
+adminRouter.post("/users", async (req, res, next) => {
+  try {
+    const body = adminCreateUserSchema.parse(req.body);
+    const passwordHash = await bcrypt.hash(body.password, 12);
+    const user = await store.createUser({
+      name: body.name,
+      email: body.email,
+      passwordHash,
+      role: body.role,
+      status: body.status
+    });
+    return ok(res, user, 201);
+  } catch (error) {
+    if (error instanceof z.ZodError) return fail(res, 422, "Invalid user data", error.flatten());
+    return next(error);
+  }
+});
+
 adminRouter.patch("/users/:id/status", async (req, res) => {
   const status = req.body.status;
   if (!["active", "disabled"].includes(status)) return fail(res, 422, "Status must be active or disabled");
   const user = await store.setUserStatus(req.params.id, status);
+  if (!user) return fail(res, 404, "User not found");
+  return ok(res, user);
+});
+
+adminRouter.patch("/users/:id/role", async (req, res) => {
+  const role = req.body.role;
+  if (!["user", "admin"].includes(role)) return fail(res, 422, "Role must be user or admin");
+  const user = await store.setUserRole(req.params.id, role);
   if (!user) return fail(res, 404, "User not found");
   return ok(res, user);
 });
