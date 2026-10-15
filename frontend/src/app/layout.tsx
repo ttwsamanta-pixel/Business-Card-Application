@@ -8,6 +8,7 @@ import './management.css';
 import './app-shell.css';
 
 export const metadata: Metadata = {
+  robots: { index: false, follow: false, noarchive: true },
   title: "CardStudio - Digital Business Card SaaS",
   description: "Create QR-enabled digital business cards with public profile pages."
 };

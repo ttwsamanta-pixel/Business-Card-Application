@@ -9,6 +9,12 @@ async function register(email = "owner@example.com") {
 }
 
 describe("digital business card API", () => {
+  it('marks API responses and errors as non-indexable',async()=>{
+    for(const path of ['/health','/api/templates','/api/cards','/missing-page']) {
+      const response=await request(app).get(path);
+      expect(response.headers['x-robots-tag']).toBe('noindex, nofollow, noarchive');
+    }
+  });
   it('restricts masters to administrators and preserves saved master selections',async()=>{
     const admin=await register('master-admin@example.com');await store.setUserRole(admin.user.id,'admin');
     const user=await register('master-user@example.com');

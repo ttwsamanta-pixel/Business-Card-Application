@@ -19,6 +19,10 @@ import { fail } from "./utils/http.js";
 export const app = express();
 
 app.set("trust proxy", 1);
+app.use((_req, res, next) => {
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
+  next();
+});
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(cors({ origin: config.FRONTEND_ORIGIN.split(","), credentials: true }));
 app.use(express.json({ limit: "1mb" }));

@@ -2,7 +2,34 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, KeyRound, Menu, X, Sun, Moon } from "lucide-react";
+import {
+  ChevronDown,
+  KeyRound,
+  Menu,
+  X,
+  Sun,
+  Moon,
+  LayoutDashboard,
+  LayoutTemplate,
+  ContactRound,
+  ChartNoAxesCombined,
+  Users,
+  Folder,
+  Settings2,
+  Share2,
+  BookUser,
+  Link2,
+  CalendarDays,
+  Images,
+  TextCursorInput,
+  PanelsTopLeft,
+  Maximize2,
+  MousePointerClick,
+  MessageSquare,
+  Blocks,
+  Type,
+  type LucideIcon,
+} from "lucide-react";
 import { api, clearToken, endpoints } from "@/lib/api";
 import {
   menus,
@@ -11,6 +38,36 @@ import {
   type SessionUser,
 } from "@/lib/permissions";
 import { usePathname } from "next/navigation";
+
+const menuIcons: Record<string, LucideIcon> = {
+  dashboard: LayoutDashboard,
+  templates: LayoutTemplate,
+  cards: ContactRound,
+  analytics: ChartNoAxesCombined,
+  users: Users,
+  folders: Folder,
+  "master:social": Share2,
+  "master:contact": BookUser,
+  "master:links": Link2,
+  "master:appointment": CalendarDays,
+  "master:image-layout": Images,
+  "master:field-type": TextCursorInput,
+  "master:form-mode": PanelsTopLeft,
+  "master:form-size": Maximize2,
+  "master:form-trigger": MousePointerClick,
+  "master:completion": MessageSquare,
+  "master:component": Blocks,
+  "master:font": Type,
+};
+function MenuLabel({ menuKey, label }: { menuKey: string; label: string }) {
+  const Icon = menuIcons[menuKey] || Settings2;
+  return (
+    <span className="sidebar-menu-label">
+      <Icon size={18} aria-hidden="true" />
+      <span>{label}</span>
+    </span>
+  );
+}
 
 function greeting() {
   const hour = new Date().getHours();
@@ -104,12 +161,19 @@ export function AppNav() {
               href={m.href}
               aria-current={key === m.key ? "page" : undefined}
             >
-              {m.label}
+              <MenuLabel menuKey={m.key} label={m.label} />
             </Link>
           ))}
         {visible.some((m) => m.href.startsWith("/master")) && (
           <details className="master-nav" open={pathname.startsWith("/master")}>
-            <summary>Master</summary>
+            <summary>
+              <MenuLabel menuKey="master" label="Master" />
+              <ChevronDown
+                className="master-chevron"
+                size={16}
+                aria-hidden="true"
+              />
+            </summary>
             <nav>
               {visible
                 .filter((m) => m.href.startsWith("/master"))
@@ -119,7 +183,7 @@ export function AppNav() {
                     href={m.href}
                     aria-current={pathname === m.href ? "page" : undefined}
                   >
-                    {m.label}
+                    <MenuLabel menuKey={m.key} label={m.label} />
                   </Link>
                 ))}
             </nav>

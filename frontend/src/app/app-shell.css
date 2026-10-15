@@ -1,3 +1,32 @@
+.sidebar-menu-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.sidebar-menu-label svg {
+  flex-shrink: 0;
+}
+.sidebar-menu-label span {
+  overflow-wrap: anywhere;
+}
+.dashboard-layout .master-nav summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  list-style: none;
+}
+.master-nav summary::-webkit-details-marker {
+  display: none;
+}
+.master-chevron {
+  flex-shrink: 0;
+  transform: rotate(-90deg);
+}
+.master-nav[open] > summary .master-chevron {
+  transform: rotate(0deg);
+}
 .dashboard-layout {
   --surface: #fff;
   --canvas: #f6f7f9;
