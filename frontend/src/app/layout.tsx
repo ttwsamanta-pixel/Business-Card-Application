@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import './editor-controls.css';
 
 export const metadata: Metadata = {
   title: "CardStudio - Digital Business Card SaaS",

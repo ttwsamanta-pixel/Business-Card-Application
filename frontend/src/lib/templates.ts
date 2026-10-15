@@ -1,5 +1,6 @@
 export type SocialLink = { id?: string; platform: string; url: string };
 export type CardProfile = {
+  content?: import('./card-content').ContentSection[];
   id?: string;
   templateId: string;
   slug?: string;

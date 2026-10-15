@@ -19,6 +19,7 @@ export type SocialLink = {
 };
 
 export type BusinessCard = {
+  content?: { id: string; type: string; enabled: boolean; background: boolean; values: Record<string, string | boolean>; items: { id: string; values: Record<string, string | boolean> }[] }[];
   id: string;
   userId: string;
   templateId: string;

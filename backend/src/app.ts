@@ -21,6 +21,7 @@ app.use(cors({ origin: config.FRONTEND_ORIGIN.split(","), credentials: true }));
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 app.use("/uploads", express.static(path.resolve(config.UPLOAD_DIR), { fallthrough: false }));
+app.use('/api/uploads/files', express.static(path.resolve(config.UPLOAD_DIR), { fallthrough: false }));
 
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: isProduction ? 40 : 200 });
 app.use("/api/auth/login", authLimiter);
@@ -38,6 +39,7 @@ app.use("/api/admin", adminRouter);
 app.use((_req, res) => fail(res, 404, "Route not found"));
 
 app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  if (error && typeof error === 'object' && 'code' in error && error.code === 'LIMIT_FILE_SIZE') return fail(res,422,`Image must be smaller than ${config.MAX_UPLOAD_MB} MB`);
   if (error && typeof error === "object" && "issues" in error) {
     return fail(res, 422, "Validation failed", error);
   }

@@ -1,0 +1,255 @@
+fieldset.maker-form { border:0;margin:0; }
+.editor-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  font-size: 13px;
+  cursor: pointer;
+  line-height: 1.4;
+}
+.editor-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 40px;
+  height: 24px;
+}
+.editor-switch input:focus-visible + span {
+  outline: 2px solid #152d52;
+  outline-offset: 3px;
+}
+.editor-switch .ref-toggle {
+  flex: none;
+}
+.editor-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.ref-component-head:has(.editor-section-actions) {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.editor-section-actions .editor-switch {
+  font-size: 0;
+}
+.editor-section-actions .editor-switch .ref-toggle {
+  font-size: 14px;
+}
+.editor-section-actions button,
+.editor-item-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #dce1eb;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.editor-item {
+  display: grid;
+  gap: 14px;
+  padding-top: 16px;
+}
+.editor-item-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.editor-upload {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.editor-upload .upload-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.editor-upload .upload-row img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+}
+.editor-upload .upload-row button {
+  width: 42px;
+  height: 42px;
+}
+.editor-template-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.maker-center,
+.maker-preview,
+.maker-form,
+.ref-body {
+  min-width: 0;
+}
+.maker-url > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.page-url-block > div {
+  flex-wrap: wrap;
+}
+.page-url-block span {
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+.template-picker .business-card {
+  pointer-events: none;
+}
+.template-picker .business-card .card-inner {
+  max-height: 160px;
+  overflow: hidden;
+}
+.card-brand-logo {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  margin: 8px auto;
+}
+.link-icon {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+.link-row small {
+  display: block;
+}
+.content-gallery {
+  display: grid;
+  gap: 10px;
+}
+.content-gallery img {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+.gallery-two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.gallery-three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.business-card .info-card {
+  border-radius: var(--card-radius, 12px);
+  overflow-wrap: anywhere;
+}
+.business-card .transparent-section {
+  background: transparent;
+  box-shadow: none;
+  border: 0;
+}
+.lead-public-form {
+  display: grid;
+  gap: 12px;
+}
+.lead-public-form .field {
+  text-align: left;
+}
+.lead-header-image {
+  max-width: 100%;
+  height: auto;
+}
+.lead-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0008;
+  padding: 16px;
+}
+.lead-popup {
+  background: white;
+  color: #172033;
+  padding: 24px;
+  border-radius: 8px;
+  width: min(100%, 520px);
+  max-height: 90vh;
+  overflow: auto;
+}
+.lead-popup.full-screen {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+}
+.lead-preview-overlay {
+  padding: 8px;
+  border: 1px solid #ddd;
+}
+.lead-preview-overlay .lead-popup {
+  padding: 8px;
+  max-height: 450px;
+}
+.card-contact-button {
+  position: sticky;
+  bottom: 8px;
+}
+.add-component-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.add-component-row select {
+  max-width: 260px;
+}
+.business-card .cover-hero:not(:has(.cover-image)) {
+  min-height: 140px;
+}
+.business-card .card-inner p {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 800px) {
+  .maker-steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .maker-steps button {
+    min-width: 0;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px;
+  }
+  .maker-steps button > svg {
+    display: none;
+  }
+  .maker-main .maker-hero h1 {
+    font-size: 24px;
+  }
+  .ref-body {
+    padding: 14px;
+  }
+  .editor-section-actions {
+    gap: 4px;
+  }
+  .maker-preview {
+    position: static;
+  }
+  .maker-steps button {
+    font-size: 12px;
+    padding: 8px;
+  }
+  .maker-shell {
+    padding: 12px;
+  }
+  .page-url-block > div {
+    display: block;
+  }
+  .page-url-block .input {
+    width: 100%;
+  }
+}

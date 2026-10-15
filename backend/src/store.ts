@@ -6,6 +6,8 @@ import type { BusinessCard, PublicUser, Role, SocialLink, User } from "./types.j
 import { uniqueSlug } from "./utils/slug.js";
 
 export interface Store {
+  addLead(cardId: string, sectionId: string, answers: Record<string,string>): Promise<void>;
+  listLeads(cardId: string): Promise<unknown[]>;
   createUser(input: { name: string; email: string; passwordHash: string; role?: Role; status?: "active" | "disabled" }): Promise<PublicUser>;
   findUserByEmail(email: string): Promise<User | undefined>;
   findUserById(id: string): Promise<User | undefined>;
@@ -41,6 +43,9 @@ function sqlValues(values: unknown[]) {
 }
 
 export class MemoryStore implements Store {
+  private leads: {id:string;cardId:string;sectionId:string;answers:Record<string,string>;createdAt:string}[] = [];
+  async addLead(cardId:string,sectionId:string,answers:Record<string,string>) { this.leads.push({id:randomUUID(),cardId,sectionId,answers,createdAt:new Date().toISOString()}); }
+  async listLeads(cardId:string): Promise<unknown[]> { return this.leads.filter(lead=>lead.cardId===cardId); }
   private users = new Map<string, User>();
   private cards = new Map<string, BusinessCard>();
   private resets = new Map<string, { userId: string; expiresAt: Date; used: boolean }>();
@@ -143,6 +148,7 @@ export class MemoryStore implements Store {
       profileImageUrl: data.profileImageUrl || "",
       logoUrl: data.logoUrl || "",
       theme: data.theme || {},
+      content: data.content,
       socialLinks: data.socialLinks || [],
       publishedAt: data.status === "published" ? now : undefined,
       createdAt: now,
@@ -203,6 +209,8 @@ export class MemoryStore implements Store {
 }
 
 export class MySqlStore extends MemoryStore {
+  async addLead(cardId:string,sectionId:string,answers:Record<string,string>) { await this.pool.execute('INSERT INTO card_leads (id,card_id,section_id,answers) VALUES (?,?,?,?)',[randomUUID(),cardId,sectionId,JSON.stringify(answers)]); }
+  async listLeads(cardId:string) { const [rows]=await this.pool.execute<mysql.RowDataPacket[]>('SELECT id,section_id,answers,created_at FROM card_leads WHERE card_id=? ORDER BY created_at DESC',[cardId]); return rows; }
   private pool = mysql.createPool({
     host: config.DB_HOST,
     port: config.DB_PORT,
@@ -286,6 +294,7 @@ export class MySqlStore extends MemoryStore {
       sqlValues([card.id,userId,card.templateId,card.slug,card.status,card.fullName,card.designation,card.company,card.bio,card.email,card.phone,card.whatsapp,card.website,card.address,card.mapsUrl,card.profileImageUrl,card.logoUrl,JSON.stringify(card.theme),card.publishedAt ? new Date(card.publishedAt) : null])
     );
     await this.replaceSocials(card.id, card.socialLinks);
+    await this.replaceContent(card.id, card.content);
     return card;
   }
 
@@ -314,6 +323,7 @@ export class MySqlStore extends MemoryStore {
       sqlValues([card.templateId,card.slug,card.status,card.fullName,card.designation,card.company,card.bio,card.email,card.phone,card.whatsapp,card.website,card.address,card.mapsUrl,card.profileImageUrl,card.logoUrl,JSON.stringify(card.theme),card.publishedAt ? new Date(card.publishedAt) : null,id,userId])
     );
     await this.replaceSocials(id, card.socialLinks);
+    await this.replaceContent(id, card.content);
     return card;
   }
 
@@ -351,10 +361,13 @@ export class MySqlStore extends MemoryStore {
   }
 
   private async rowToCard(row: mysql.RowDataPacket): Promise<BusinessCard> {
+    const [contentRows] = await this.pool.execute<mysql.RowDataPacket[]>('SELECT content FROM card_content WHERE card_id = ?', [row.id]);
+    const content = contentRows[0]?.content;
     const [links] = await this.pool.execute<mysql.RowDataPacket[]>("SELECT id, platform, url FROM card_social_links WHERE card_id = ? ORDER BY sort_order ASC", [row.id]);
     return {
       id: row.id,
       userId: row.user_id,
+      content: typeof content === 'string' ? JSON.parse(content) : content || undefined,
       templateId: row.template_id,
       slug: row.slug,
       status: row.status,
@@ -383,6 +396,10 @@ export class MySqlStore extends MemoryStore {
     for (const [index, link] of links.entries()) {
       await this.pool.execute("INSERT INTO card_social_links (id, card_id, platform, url, sort_order) VALUES (?, ?, ?, ?, ?)", [link.id || randomUUID(), cardId, link.platform, link.url, index]);
     }
+  }
+
+  private async replaceContent(cardId: string, content: BusinessCard['content']) {
+    if (content) await this.pool.execute('INSERT INTO card_content (card_id, content) VALUES (?, ?) ON DUPLICATE KEY UPDATE content = VALUES(content)', [cardId, JSON.stringify(content)]);
   }
 }
 

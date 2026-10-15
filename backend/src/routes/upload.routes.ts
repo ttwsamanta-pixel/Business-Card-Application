@@ -13,7 +13,7 @@ fs.mkdirSync(uploadRoot, { recursive: true });
 const storage = multer.diskStorage({
   destination: (_req, _file, callback) => callback(null, uploadRoot),
   filename: (_req, file, callback) => {
-    const ext = path.extname(file.originalname).toLowerCase();
+    const ext = ({'image/jpeg':'.jpg','image/png':'.png','image/webp':'.webp','image/gif':'.gif'} as Record<string,string>)[file.mimetype] || '.bin';
     callback(null, `${randomUUID()}${ext}`);
   }
 });
@@ -31,7 +31,7 @@ export const uploadRouter = Router();
 
 uploadRouter.post("/", authenticate, upload.single("file"), (req, res) => {
   if (!req.file) return fail(res, 422, "A valid image file is required");
-  const publicUrl = `${config.API_URL}/uploads/${req.file.filename}`;
+  const publicUrl = new URL(`/api/uploads/files/${req.file.filename}`, config.API_URL).href;
   return ok(res, {
     originalName: req.file.originalname,
     fileName: req.file.filename,
