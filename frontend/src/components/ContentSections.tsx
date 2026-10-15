@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Download, Globe, Mail, Phone } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { MasterIcon } from "./MasterIcon";
 import { api, publicApiAsset } from "@/lib/api";
 import { safeLink, type ContentSection } from "@/lib/card-content";
 import { templateFor, type CardProfile } from "@/lib/templates";
@@ -291,13 +293,21 @@ export function ContentSections({
                                 : safeLink(value);
                         return href ? (
                           <a key={i.id} href={href} aria-label={String(type)}>
-                            {type === "Mobile" ? (
-                              <Phone size={16} />
-                            ) : type === "Email" ? (
-                              <Mail size={16} />
-                            ) : (
-                              <Globe size={16} />
-                            )}
+                            <MasterIcon
+                              small
+                              name={String(
+                                i.values.iconKey ||
+                                  (
+                                    {
+                                      Mobile: "phone",
+                                      Email: "mail",
+                                      WhatsApp: "whatsapp",
+                                    } as Record<string, string>
+                                  )[String(type)] ||
+                                  "globe",
+                              )}
+                              url={String(i.values.icon || "")}
+                            />
                           </a>
                         ) : null;
                       })}
@@ -310,7 +320,7 @@ export function ContentSections({
             <section
               key={section.id}
               data-content-type={section.type}
-              className={`info-card ${section.background ? "" : "transparent-section"}`}
+              className={`info-card ${section.type === "social" ? "social-section" : ""} ${section.background ? "" : "transparent-section"}`}
             >
               {section.type === "lead" ? (
                 !compact ? (
@@ -345,21 +355,41 @@ export function ContentSections({
                     const x = i.values;
                     return (
                       <div key={i.id}>
-                        <strong>{String(x.label || "")}</strong>
+                        <div className="contact-master-label">
+                          <MasterIcon
+                            small
+                            name={String(
+                              x.iconKey ||
+                                (
+                                  {
+                                    Phone: "phone",
+                                    Email: "mail",
+                                    Address: "map",
+                                  } as Record<string, string>
+                                )[String(x.type)] ||
+                                "globe",
+                            )}
+                            url={String(x.icon || "")}
+                          />
+                          <strong>{String(x.label || "")}</strong>
+                        </div>
                         {x.type === "Address" ? (
                           <>
                             <p>
-                              {[
-                                "line1",
-                                "line2",
-                                "city",
-                                "state",
-                                "country",
-                                "zip",
-                              ]
-                                .map((key) => x[key])
-                                .filter(Boolean)
-                                .join(", ")}
+                              {String(
+                                  x.value ??
+                                  [
+                                    "line1",
+                                    "line2",
+                                    "city",
+                                    "state",
+                                    "country",
+                                    "zip",
+                                  ]
+                                    .map((key) => x[key])
+                                    .filter(Boolean)
+                                    .join(", "),
+                              )}
                             </p>
                             {x.direction && safeLink(String(x.url || "")) ? (
                               <a href={safeLink(String(x.url))}>
@@ -370,7 +400,13 @@ export function ContentSections({
                         ) : (
                           <p>
                             <a
-                              href={`${x.type === "Email" ? "mailto" : "tel"}:${String(x.value || "")}`}
+                              href={
+                                x.type === "Website"
+                                  ? safeLink(String(x.value || ""))
+                                  : x.type === "WhatsApp"
+                                    ? `https://wa.me/${String(x.value || "").replace(/\D/g, "")}`
+                                    : `${x.type === "Email" ? "mailto" : "tel"}:${String(x.value || "")}`
+                              }
                             >
                               {String(x.value || "")}
                             </a>
@@ -423,12 +459,21 @@ export function ContentSections({
                     return href ? (
                       <a
                         key={i.id}
-                        className="link-row"
+                        className={
+                          section.type === "social"
+                            ? "social-link-row"
+                            : "link-row"
+                        }
                         href={href}
                         target="_blank"
                         rel="noreferrer"
                       >
-                        {x.icon ? (
+                        {section.type === "social" ? (
+                          <MasterIcon
+                            name={String(x.iconKey || x.platform || "globe")}
+                            url={String(x.icon || "")}
+                          />
+                        ) : x.icon ? (
                           <img
                             className="link-icon"
                             src={String(x.icon)}
@@ -437,10 +482,20 @@ export function ContentSections({
                         ) : null}
                         <span>
                           {String(x.title || x.platform || x.url)}
-                          {x.showSubtitle ? (
-                            <small>{String(x.subtitle || "")}</small>
+                          {x.showSubtitle !== false ? (
+                            <small>
+                              {String(
+                                x.subtitle ||
+                                  (section.type === "social"
+                                    ? `Follow us on ${x.platform || x.title}`
+                                    : ""),
+                              )}
+                            </small>
                           ) : null}
                         </span>
+                        {section.type === "social" ? (
+                          <ChevronRight size={20} />
+                        ) : null}
                       </a>
                     ) : null;
                   })}

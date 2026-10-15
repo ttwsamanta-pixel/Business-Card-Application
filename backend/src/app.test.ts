@@ -1,6 +1,7 @@
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 import { app } from "./app.js";
+import { store } from './store.js';
 
 async function register(email = "owner@example.com") {
   const res = await request(app).post("/api/auth/register").send({ name: "Owner User", email, password: "Password123!" });
@@ -8,6 +9,29 @@ async function register(email = "owner@example.com") {
 }
 
 describe("digital business card API", () => {
+  it('restricts masters to administrators and preserves saved master selections',async()=>{
+    const admin=await register('master-admin@example.com');await store.setUserRole(admin.user.id,'admin');
+    const user=await register('master-user@example.com');
+    const adminAuth={Authorization:`Bearer ${admin.token}`};const userAuth={Authorization:`Bearer ${user.token}`};
+    expect((await request(app).get('/api/masters')).status).toBe(401);
+    const catalog=await request(app).get('/api/masters').set(userAuth);
+    expect(catalog.body.data.groups).toHaveLength(12);
+    const draft={category:'social',value:'URL',label:'Custom Social',subtitle:'Follow our updates',iconKey:'instagram',iconUrl:'https://example.com/logo.png',active:true,sortOrder:4};
+    expect((await request(app).post('/api/masters').set(userAuth).send(draft)).status).toBe(403);
+    expect((await request(app).post('/api/masters').set(adminAuth).send({...draft,value:'Unsupported'})).status).toBe(422);
+    const created=await request(app).post('/api/masters').set(adminAuth).send(draft);expect(created.status).toBe(201);
+    const entry=created.body.data;
+    const content=[{id:'social',type:'social',enabled:true,background:true,values:{title:'Social Links'},items:[{id:'row',values:{masterId:entry.id,url:'https://example.com/profile'}}]}];
+    const card=await request(app).post('/api/cards').set(userAuth).send({templateId:'signature-classic',fullName:'Master Test',content,socialLinks:[]});
+    expect(card.status).toBe(201);
+    const values=card.body.data.content[0].items[0].values;
+    expect(values).toMatchObject({title:draft.label,subtitle:draft.subtitle,icon:draft.iconUrl,url:'https://example.com/profile'});
+    expect((await request(app).put(`/api/masters/${entry.id}`).set(userAuth).send({...entry,active:false})).status).toBe(403);
+    expect((await request(app).put(`/api/masters/${entry.id}`).set(adminAuth).send({...entry,active:false})).status).toBe(200);
+    const saved=await request(app).put(`/api/cards/${card.body.data.id}`).set(userAuth).send({content:card.body.data.content});
+    expect(saved.body.data.content[0].items[0].values).toEqual(values);
+    expect((await request(app).get('/api/masters').set(userAuth)).body.data.items.find((item:{id:string})=>item.id===entry.id).active).toBe(false);
+  });
   it('persists editor sections, media and toggles across save, publish and duplicate', async()=>{
     const owner=await register('content-owner@example.com');
     const auth={Authorization:`Bearer ${owner.token}`};
@@ -21,11 +45,15 @@ describe("digital business card API", () => {
     expect(created.status).toBe(201);
     const id=created.body.data.id;
     content.reverse();content[0].background=false;
-    expect((await request(app).put(`/api/cards/${id}`).set(auth).send({content})).status).toBe(200);
-    expect((await request(app).get(`/api/cards/${id}`).set(auth)).body.data.content).toEqual(content);
+    const updated=await request(app).put(`/api/cards/${id}`).set(auth).send({content});
+    expect(updated.status).toBe(200);
+    const savedContent=updated.body.data.content;
+    expect(savedContent.map((section:{id:string})=>section.id)).toEqual(content.map(section=>section.id));
+    expect(savedContent.find((section:{id:string})=>section.id==='contact').items[0].values.value).toBe('+1555000000');
+    expect((await request(app).get(`/api/cards/${id}`).set(auth)).body.data.content).toEqual(savedContent);
     await request(app).post(`/api/cards/${id}/publish`).set(auth);
-    expect((await request(app).get(`/api/public/cards/${created.body.data.slug}`)).body.data.content).toEqual(content);
-    expect((await request(app).post(`/api/cards/${id}/duplicate`).set(auth)).body.data.content).toEqual(content);
+    expect((await request(app).get(`/api/public/cards/${created.body.data.slug}`)).body.data.content).toEqual(savedContent);
+    expect((await request(app).post(`/api/cards/${id}/duplicate`).set(auth)).body.data.content).toEqual(savedContent);
     const vcard=await request(app).get(`/api/public/cards/${created.body.data.slug}/vcard.vcf`);
     expect(vcard.text).toContain('+1555000000');
     expect(vcard.text).toContain(`/card/${created.body.data.slug}`);

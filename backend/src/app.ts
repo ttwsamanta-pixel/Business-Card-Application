@@ -11,6 +11,7 @@ import { templateRouter } from "./routes/template.routes.js";
 import { publicRouter } from "./routes/public.routes.js";
 import { adminRouter } from "./routes/admin.routes.js";
 import { uploadRouter } from "./routes/upload.routes.js";
+import { masterRouter } from './routes/master.routes.js';
 import { fail } from "./utils/http.js";
 
 export const app = express();
@@ -35,6 +36,7 @@ app.use("/api/templates", templateRouter);
 app.use("/api/public", publicRouter);
 app.use("/api/uploads", uploadRouter);
 app.use("/api/admin", adminRouter);
+app.use('/api/masters',masterRouter);
 
 app.use((_req, res) => fail(res, 404, "Route not found"));
 

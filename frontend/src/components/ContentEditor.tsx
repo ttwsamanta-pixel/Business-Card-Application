@@ -10,6 +10,8 @@ import {
   type Values,
 } from "@/lib/card-content";
 import type { CardProfile } from "@/lib/templates";
+import { useMasters, selectedMaster, masterValues } from "@/lib/masters";
+import { MasterIcon } from "./MasterIcon";
 
 export function Switch({
   label,
@@ -200,13 +202,76 @@ type Field = {
   label: string;
   kind?: "text" | "textarea" | "toggle" | "photo" | "select";
   options?: string[];
+  masterCategory?: string;
 };
 const f = (
   key: string,
   label: string,
   kind: Field["kind"] = "text",
   options?: string[],
-): Field => ({ key, label, kind, options });
+): Field => ({
+  key,
+  label,
+  kind,
+  options,
+  masterCategory:
+    kind === "select"
+      ? (
+          {
+            layout: "image-layout",
+            type: "field-type",
+            mode: "form-mode",
+            size: "form-size",
+            trigger: "form-trigger",
+            completion: "completion",
+          } as Record<string, string>
+        )[key]
+      : undefined,
+});
+function MasterSelect({
+  field,
+  values,
+  change,
+}: {
+  field: Field;
+  values: Values;
+  change: (patch: Values) => void;
+}) {
+  const { items } = useMasters();
+  const choices = items.filter(
+    (item) => item.category === field.masterCategory,
+  );
+  const selected =
+    choices.find((item) => item.id === values[`${field.key}MasterId`]) ||
+    choices.find((item) => item.value === values[field.key]);
+  return (
+    <select
+      className="select"
+      aria-label={field.label}
+      value={selected?.id || ""}
+      onChange={(e) => {
+        const entry = choices.find((item) => item.id === e.target.value);
+        if (entry)
+          change({
+            [field.key]: entry.value,
+            [`${field.key}MasterId`]: entry.id,
+          });
+      }}
+    >
+      {!selected ? (
+        <option value="">{String(values[field.key] || "Select option")}</option>
+      ) : null}
+      {choices
+        .filter((item) => item.active || item.id === selected?.id)
+        .map((item) => (
+          <option key={item.id} value={item.id} disabled={!item.active}>
+            {item.label}
+            {!item.active ? " (inactive)" : ""}
+          </option>
+        ))}
+    </select>
+  );
+}
 function Fields({
   fields,
   values,
@@ -239,7 +304,9 @@ function Fields({
         ) : (
           <label className="field" key={field.key}>
             {field.label}
-            {field.kind === "select" ? (
+            {field.kind === "select" && field.masterCategory ? (
+              <MasterSelect field={field} values={values} change={change} />
+            ) : field.kind === "select" ? (
               <select
                 className="select"
                 aria-label={field.label}
@@ -411,6 +478,85 @@ function move<T>(items: T[], index: number, delta: number) {
   return copy;
 }
 
+function MasterRow({
+  type,
+  values,
+  change,
+}: {
+  type: string;
+  values: Values;
+  change: (patch: Values) => void;
+}) {
+  const { items } = useMasters();
+  const category = ["profile", "contact"].includes(type) ? "contact" : type;
+  const choices = items.filter(
+    (entry) =>
+      entry.category === category &&
+      (type !== "profile" || entry.value !== "Address"),
+  );
+  const selected = selectedMaster(choices, category, values);
+  const key = ["profile", "contact"].includes(type) ? "value" : "url";
+  const value =
+    values[key] ??
+    (values.type === "Address"
+      ? ["line1", "line2", "city", "state", "country", "zip"]
+          .map((k) => values[k])
+          .filter(Boolean)
+          .join(", ")
+      : "");
+  return (
+    <div className="master-editor-row">
+      <MasterIcon
+        small
+        name={String(
+          values.iconKey || selected?.iconKey || values.platform || "globe",
+        )}
+        url={String(values.icon || selected?.iconUrl || "")}
+      />
+      <label className="field">
+        {type === "social" ? "Platform" : "Type"}
+        <select
+          className="select"
+          aria-label={type === "social" ? "Platform" : "Type"}
+          value={selected?.id || ""}
+          onChange={(e) => {
+            const entry = choices.find((i) => i.id === e.target.value);
+            if (entry) change(masterValues(entry, type));
+          }}
+        >
+          {!selected ? (
+            <option value="">
+              {String(
+                values.platform ||
+                  values.type ||
+                  values.title ||
+                  "Select option",
+              )}
+            </option>
+          ) : null}
+          {choices
+            .filter((i) => i.active || i.id === selected?.id)
+            .map((i) => (
+              <option key={i.id} value={i.id} disabled={!i.active}>
+                {i.label}
+                {!i.active ? " (inactive)" : ""}
+              </option>
+            ))}
+        </select>
+      </label>
+      <label className="field">
+        {key === "url" ? "Link" : "Value"}
+        <input
+          className="input"
+          aria-label={key === "url" ? "Link" : "Value"}
+          value={String(value)}
+          onChange={(e) => change({ [key]: e.target.value })}
+        />
+      </label>
+    </div>
+  );
+}
+
 export function ContentEditor({
   card,
   change,
@@ -420,6 +566,7 @@ export function ContentEditor({
   change: (patch: Partial<CardProfile>) => void;
   onBusy: (busy: boolean) => void;
 }) {
+  const { items: masters, error: masterError } = useMasters();
   const [closed, setClosed] = useState<Record<string, boolean>>({});
   const [adding, setAdding] = useState(false);
   const [newType, setNewType] = useState("text");
@@ -431,6 +578,11 @@ export function ContentEditor({
     });
   return (
     <>
+      {masterError ? (
+        <p role="alert" className="error">
+          Master options could not be loaded: {masterError}
+        </p>
+      ) : null}
       {sections.map((section, index) => {
         const updateValues = (patch: Values) =>
           update(section.id, { values: { ...section.values, ...patch } });
@@ -580,20 +732,42 @@ export function ContentEditor({
                         <Trash2 size={15} />
                       </button>
                     </div>
-                    <Fields
-                      fields={rowFields(section.type, row.values)}
-                      values={row.values}
-                      change={(patch) =>
-                        update(section.id, {
-                          items: section.items.map((i) =>
-                            i.id === row.id
-                              ? { ...i, values: { ...i.values, ...patch } }
-                              : i,
-                          ),
-                        })
-                      }
-                      onBusy={onBusy}
-                    />
+                    {[
+                      "profile",
+                      "contact",
+                      "social",
+                      "links",
+                      "appointment",
+                    ].includes(section.type) ? (
+                      <MasterRow
+                        type={section.type}
+                        values={row.values}
+                        change={(patch) =>
+                          update(section.id, {
+                            items: section.items.map((i) =>
+                              i.id === row.id
+                                ? { ...i, values: { ...i.values, ...patch } }
+                                : i,
+                            ),
+                          })
+                        }
+                      />
+                    ) : (
+                      <Fields
+                        fields={rowFields(section.type, row.values)}
+                        values={row.values}
+                        change={(patch) =>
+                          update(section.id, {
+                            items: section.items.map((i) =>
+                              i.id === row.id
+                                ? { ...i, values: { ...i.values, ...patch } }
+                                : i,
+                            ),
+                          })
+                        }
+                        onBusy={onBusy}
+                      />
+                    )}
                   </div>
                 ))}
                 {section.type === "images" ? (
@@ -610,11 +784,33 @@ export function ContentEditor({
                 ) : section.type !== "text" ? (
                   <button
                     className="outline-action"
+                    disabled={['profile','contact','social','links','appointment'].includes(section.type)&&!masters.some(entry=>entry.active&&entry.category===(['profile','contact'].includes(section.type)?'contact':section.type)&&(section.type!=='profile'||entry.value!=='Address'))}
                     onClick={() =>
                       update(section.id, {
                         items: [
                           ...section.items,
-                          item(newValues(section.type)),
+                          item(
+                            (() => {
+                              const category = ["profile", "contact"].includes(
+                                section.type,
+                              )
+                                ? "contact"
+                                : section.type;
+                              const entry = masters.find(
+                                (m) =>
+                                  m.category === category &&
+                                  m.active &&
+                                  (section.type !== "profile" ||
+                                    m.value !== "Address"),
+                              );
+                              return entry
+                                ? {
+                                    ...newValues(section.type),
+                                    ...masterValues(entry, section.type),
+                                  }
+                                : newValues(section.type);
+                            })(),
+                          ),
                         ],
                       })
                     }
@@ -737,17 +933,20 @@ export function ContentEditor({
               value={newType}
               onChange={(e) => setNewType(e.target.value)}
             >
-              {Object.entries(sectionNames)
-                .filter(([key]) => key !== "profile")
-                .map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
+              {masters
+                .filter(
+                  (entry) => entry.category === "component" && entry.active,
+                )
+                .map((entry) => (
+                  <option key={entry.id} value={entry.value}>
+                    {entry.label}
                   </option>
                 ))}
             </select>
             <button
               className="btn"
               onClick={() => {
+                if(!masters.some(entry=>entry.category==='component'&&entry.active&&entry.value===newType))return;
                 change({ content: [...sections, makeSection(newType, card)] });
                 setAdding(false);
               }}
@@ -756,7 +955,7 @@ export function ContentEditor({
             </button>
           </>
         ) : (
-          <button className="btn" onClick={() => setAdding(true)}>
+          <button className="btn" disabled={!masters.some(entry=>entry.category==='component'&&entry.active)} onClick={() => {setNewType(masters.find(entry=>entry.category==='component'&&entry.active)?.value||'');setAdding(true);}}>
             <Plus size={16} /> Add Component
           </button>
         )}

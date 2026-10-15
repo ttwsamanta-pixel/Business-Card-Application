@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, KeyRound } from "lucide-react";
 import { clearToken, endpoints } from "@/lib/api";
+import { masterCategories } from '@/lib/masters';
+import { usePathname } from 'next/navigation';
 
 type User = {
   name: string;
@@ -24,6 +26,7 @@ function initials(name?: string) {
 }
 
 export function AppNav() {
+  const pathname=usePathname();
   const [user, setUser] = useState<User>();
   const [open, setOpen] = useState(false);
   const hello = useMemo(() => greeting(), []);
@@ -50,6 +53,7 @@ export function AppNav() {
         <Link href="/templates">Templates</Link>
         <Link href="/editor/new">Create Card</Link>
         {user?.role === "admin" ? <Link href="/admin">Users</Link> : null}
+        {user?.role === 'admin' ? <details className="master-nav" open={pathname.startsWith('/master')}><summary>Master</summary><nav>{masterCategories.map(([id,label])=><Link key={id} href={`/master/${id}`} aria-current={pathname===`/master/${id}`?'page':undefined}>{label}</Link>)}</nav></details>:null}
       </aside>
 
       <header className="topbar">

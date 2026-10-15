@@ -7,6 +7,7 @@ import { fail, ok } from "../utils/http.js";
 import { uniqueSlug } from "../utils/slug.js";
 import { qrPngDataUrl, qrSvg } from "../utils/qr.js";
 import { toVCard } from "../utils/vcard.js";
+import { applyMasterDefaults } from '../masters.js';
 
 export const cardRouter = Router();
 
@@ -23,6 +24,7 @@ cardRouter.post("/", async (req, res) => {
         .join("; "),
     );
   const body = parsed.data;
+  if(body.content)body.content=applyMasterDefaults(body.content,await store.listMasters());
   if (!templateById(body.templateId))
     return fail(res, 422, "Selected template is not available");
   const card = await store.createCard(req.user!.id, {
@@ -59,6 +61,7 @@ cardRouter.put("/:id", async (req, res) => {
         .join("; "),
     );
   const body = parsed.data;
+  if(body.content)body.content=applyMasterDefaults(body.content,await store.listMasters());
   if (body.templateId && !templateById(body.templateId))
     return fail(res, 422, "Selected template is not available");
   const card = await store.updateCard(req.user!.id, req.params.id, body);

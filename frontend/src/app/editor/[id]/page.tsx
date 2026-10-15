@@ -11,11 +11,20 @@ import {
 import { AppNav } from "@/components/AppNav";
 import { CardRenderer } from "@/components/CardRenderer";
 import { ContentEditor } from "@/components/ContentEditor";
+import { MasterProvider, useMasters } from "@/lib/masters";
 import { endpoints, publicApiAsset, publicCardUrl } from "@/lib/api";
 import { initialContent } from "@/lib/card-content";
 import { emptyCard, templates, type CardProfile } from "@/lib/templates";
 
 export default function EditorPage() {
+  return (
+    <MasterProvider>
+      <Editor />
+    </MasterProvider>
+  );
+}
+function Editor() {
+  const { items: masterItems } = useMasters();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [card, setCard] = useState<CardProfile>(emptyCard);
@@ -220,15 +229,18 @@ export default function EditorPage() {
                         value={card.theme?.font || "Arial"}
                         onChange={(e) => setTheme("font", e.target.value)}
                       >
-                        {[
-                          "Arial",
-                          "Georgia",
-                          "Verdana",
-                          "Tahoma",
-                          "Courier New",
-                        ].map((font) => (
-                          <option key={font}>{font}</option>
-                        ))}
+                        {masterItems
+                          .filter(
+                            (item) =>
+                              item.category === "font" &&
+                              (item.active ||
+                                item.value === (card.theme?.font || "Arial")),
+                          )
+                          .map((item) => (
+                            <option key={item.id} value={item.value}>
+                              {item.label}
+                            </option>
+                          ))}
                       </select>
                     </label>
                     <label className="field">
@@ -282,7 +294,11 @@ export default function EditorPage() {
                   Back
                 </button>
                 {step < 3 ? (
-                  <button className="btn" disabled={uploads > 0 || saving} onClick={() => setStep(step + 1)}>
+                  <button
+                    className="btn"
+                    disabled={uploads > 0 || saving}
+                    onClick={() => setStep(step + 1)}
+                  >
                     Next
                   </button>
                 ) : (

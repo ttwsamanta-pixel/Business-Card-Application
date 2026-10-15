@@ -4,8 +4,11 @@ import { config } from "./config.js";
 import { templates } from "./templates.js";
 import type { BusinessCard, PublicUser, Role, SocialLink, User } from "./types.js";
 import { uniqueSlug } from "./utils/slug.js";
+import { defaultMasters, type MasterItem } from './masters.js';
 
 export interface Store {
+  listMasters(): Promise<MasterItem[]>;
+  saveMaster(item:MasterItem): Promise<void>;
   addLead(cardId: string, sectionId: string, answers: Record<string,string>): Promise<void>;
   listLeads(cardId: string): Promise<unknown[]>;
   createUser(input: { name: string; email: string; passwordHash: string; role?: Role; status?: "active" | "disabled" }): Promise<PublicUser>;
@@ -43,6 +46,9 @@ function sqlValues(values: unknown[]) {
 }
 
 export class MemoryStore implements Store {
+  private masters = new Map(defaultMasters.map(item=>[item.id,{...item}]));
+  async listMasters() {return [...this.masters.values()].sort((a,b)=>a.sortOrder-b.sortOrder || a.label.localeCompare(b.label));}
+  async saveMaster(item:MasterItem) {this.masters.set(item.id,{...item});}
   private leads: {id:string;cardId:string;sectionId:string;answers:Record<string,string>;createdAt:string}[] = [];
   async addLead(cardId:string,sectionId:string,answers:Record<string,string>) { this.leads.push({id:randomUUID(),cardId,sectionId,answers,createdAt:new Date().toISOString()}); }
   async listLeads(cardId:string): Promise<unknown[]> { return this.leads.filter(lead=>lead.cardId===cardId); }
@@ -209,6 +215,13 @@ export class MemoryStore implements Store {
 }
 
 export class MySqlStore extends MemoryStore {
+  async listMasters():Promise<MasterItem[]> {
+    const [rows]=await this.pool.query<mysql.RowDataPacket[]>('SELECT * FROM master_options ORDER BY sort_order,label');
+    return rows.map(row=>({id:row.id,category:row.category,value:row.value,label:row.label,subtitle:row.subtitle,iconKey:row.icon_key,iconUrl:row.icon_url,active:Boolean(row.active),sortOrder:row.sort_order}));
+  }
+  async saveMaster(item:MasterItem) {
+    await this.pool.execute('INSERT INTO master_options (id,category,value,label,subtitle,icon_key,icon_url,active,sort_order) VALUES (?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE value=VALUES(value),label=VALUES(label),subtitle=VALUES(subtitle),icon_key=VALUES(icon_key),icon_url=VALUES(icon_url),active=VALUES(active),sort_order=VALUES(sort_order)',[item.id,item.category,item.value,item.label,item.subtitle,item.iconKey,item.iconUrl,item.active,item.sortOrder]);
+  }
   async addLead(cardId:string,sectionId:string,answers:Record<string,string>) { await this.pool.execute('INSERT INTO card_leads (id,card_id,section_id,answers) VALUES (?,?,?,?)',[randomUUID(),cardId,sectionId,JSON.stringify(answers)]); }
   async listLeads(cardId:string) { const [rows]=await this.pool.execute<mysql.RowDataPacket[]>('SELECT id,section_id,answers,created_at FROM card_leads WHERE card_id=? ORDER BY created_at DESC',[cardId]); return rows; }
   private pool = mysql.createPool({

@@ -2,6 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import mysql from "mysql2/promise";
 import { config } from "../config.js";
+import { defaultMasters } from '../masters.js';
 
 const root = path.resolve("../database/migrations");
 
@@ -23,4 +24,7 @@ for (const file of files) {
   console.log(`Migrated ${file}`);
 }
 
+for (const entry of defaultMasters) {
+  await connection.execute('INSERT IGNORE INTO master_options (id,category,value,label,subtitle,icon_key,icon_url,active,sort_order) VALUES (?,?,?,?,?,?,?,?,?)',[entry.id,entry.category,entry.value,entry.label,entry.subtitle,entry.iconKey,entry.iconUrl,entry.active,entry.sortOrder]);
+}
 await connection.end();

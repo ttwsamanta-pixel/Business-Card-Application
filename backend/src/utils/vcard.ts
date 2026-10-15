@@ -23,7 +23,7 @@ export function toVCard(card: BusinessCard) {
           return [`EMAIL:${esc(String(v.value))}`];
         if (v.type === "Address")
           return [
-            `ADR;TYPE=WORK:;;${esc([v.line1, v.line2].filter(Boolean).join(" "))};${esc(String(v.city || ""))};${esc(String(v.state || ""))};${esc(String(v.zip || ""))};${esc(String(v.country || ""))}`,
+            `ADR;TYPE=WORK:;;${esc(String(v.value ?? [v.line1, v.line2].filter(Boolean).join(" ")))};${esc(String(v.value!==undefined?'':v.city || ""))};${esc(String(v.value!==undefined?'':v.state || ""))};${esc(String(v.value!==undefined?'':v.zip || ""))};${esc(String(v.value!==undefined?'':v.country || ""))}`,
           ];
         return [];
       });
