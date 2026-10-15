@@ -9,21 +9,20 @@ export default function LandingPage() {
       <nav className="nav">
         <Link href="/" className="brand"><img src="/TTW-Logo.png" alt="" className="brand-logo"/>TTW card studio</Link>
         <div className="nav-links">
-          <Link href="/templates">Templates</Link>
-          <Link href="/login">Login</Link>
-          <Link href="/login" className="btn">Dashboard <ArrowRight size={16}/></Link>
+          <Link href="/templates" className="btn secondary">Templates</Link>
+          <Link href="/login" className="btn">Login</Link>
         </div>
       </nav>
       <section className="page hero">
         <div>
-          <h1>Digital business cards that are ready to share.</h1>
+          <h1>Digital Business Cards</h1>
           <p>Create polished QR-enabled public profiles, manage multiple cards, and keep every contact detail current from one dashboard.</p>
           <div className="hero-actions">
             <Link className="btn" href="/login">Login <ArrowRight size={16}/></Link>
             <Link className="btn secondary" href="/templates">View templates</Link>
           </div>
         </div>
-        <div className="hero-preview"><div style={{width:360}}><CardRenderer card={{...emptyCard,status:"published",slug:"asha-rao"}} /></div></div>
+        <div className="hero-preview"><div style={{width:360,maxWidth:'100%'}}><CardRenderer card={{...emptyCard,status:"draft",slug:""}} /></div></div>
       </section>
       <section className="page">
         <div className="section-title"><h2>Featured templates</h2><Link href="/templates">Browse all 25</Link></div>

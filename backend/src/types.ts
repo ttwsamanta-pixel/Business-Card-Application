@@ -9,6 +9,7 @@ export type User = {
   role: Role;
   status: "active" | "disabled";
   profileImageUrl?: string;
+  permissions?: string[];
   createdAt: string;
 };
 
@@ -44,7 +45,7 @@ export type BusinessCard = {
   updatedAt: string;
 };
 
-export type PublicUser = Pick<User, "id" | "name" | "email" | "role" | "status" | "profileImageUrl">;
+export type PublicUser = Pick<User, "id" | "name" | "email" | "role" | "status" | "profileImageUrl" | "permissions">;
 
 declare global {
   namespace Express {

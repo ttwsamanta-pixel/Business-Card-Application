@@ -14,7 +14,7 @@ export default function LoginPage() {
     try {
       const res = await endpoints.login({ email, password });
       setToken(res.token);
-      location.href = new URLSearchParams(location.search).get("next") || "/dashboard";
+      location.href = "/dashboard";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     }

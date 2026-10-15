@@ -2,17 +2,15 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, KeyRound } from "lucide-react";
-import { clearToken, endpoints } from "@/lib/api";
-import { masterCategories } from '@/lib/masters';
-import { usePathname } from 'next/navigation';
-
-type User = {
-  name: string;
-  email: string;
-  role: string;
-  profileImageUrl?: string;
-};
+import { ChevronDown, KeyRound, Menu, X, Sun, Moon } from "lucide-react";
+import { api, clearToken, endpoints } from "@/lib/api";
+import {
+  menus,
+  canAccess,
+  pagePermission,
+  type SessionUser,
+} from "@/lib/permissions";
+import { usePathname } from "next/navigation";
 
 function greeting() {
   const hour = new Date().getHours();
@@ -26,63 +24,196 @@ function initials(name?: string) {
 }
 
 export function AppNav() {
-  const pathname=usePathname();
-  const [user, setUser] = useState<User>();
+  const pathname = usePathname();
+  const [user, setUser] = useState<SessionUser>();
+  const [ready, setReady] = useState(false);
+  const [mobile, setMobile] = useState(false);
+  const [dark, setDark] = useState(false);
   const [open, setOpen] = useState(false);
   const hello = useMemo(() => greeting(), []);
 
   useEffect(() => {
-    endpoints.me()
-      .then((res) => setUser(res.user))
-      .catch(() => setUser(undefined));
+    const refresh = () =>
+      endpoints
+        .me()
+        .then((res) => setUser(res.user))
+        .catch(() => {
+          location.href = "/login";
+        })
+        .finally(() => setReady(true));
+    refresh();
+    window.addEventListener("focus", refresh);
+    setDark(localStorage.getItem("dbc_theme") === "dark");
+    return () => window.removeEventListener("focus", refresh);
   }, []);
 
-  const logout = () => {
+  useEffect(() => {
+    document.documentElement.dataset.appTheme = dark ? "dark" : "light";
+  }, [dark]);
+  useEffect(() => {
+    setMobile(false);
+    setOpen(false);
+  }, [pathname]);
+  useEffect(() => {
+    if (!mobile) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobile(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [mobile]);
+  const key = pagePermission(pathname);
+  const allowed = !key || canAccess(user, key);
+  const visible = menus.filter((m) => canAccess(user, m.key));
+
+  const logout = async () => {
+    await api("/auth/logout", { method: "POST" }).catch(() => {});
     clearToken();
     location.href = "/login";
   };
 
   return (
     <>
-      <aside className="sidebar">
+      {mobile && (
+        <button
+          className="nav-backdrop"
+          aria-label="Close navigation"
+          onClick={() => setMobile(false)}
+        />
+      )}
+      <aside
+        id="app-navigation"
+        className={`sidebar ${mobile ? "mobile-open" : ""}`}
+      >
+        <button
+          className="icon-button mobile-nav-close"
+          aria-label="Close navigation"
+          onClick={() => setMobile(false)}
+        >
+          <X size={20} />
+        </button>
         <Link href="/" className="brand sidebar-brand">
-          <img src="/TTW-Logo.png" alt="" className="brand-logo"/>
+          <img src="/TTW-Logo.png" alt="" className="brand-logo" />
           <span>TTW card studio</span>
         </Link>
-        <Link href="/dashboard">Dashboard</Link>
-        <Link href="/templates">Templates</Link>
-        <Link href="/cards" aria-current={pathname==='/cards'?'page':undefined}>Cards</Link>
-        {user?.role === "admin" ? <Link href="/admin">Users</Link> : null}
-        <details className="master-nav" open={pathname.startsWith('/master')}><summary>Master</summary><nav><Link href="/master/folders" aria-current={pathname==='/master/folders'?'page':undefined}>Folders</Link>{user?.role==='admin'&&masterCategories.map(([id,label])=><Link key={id} href={`/master/${id}`} aria-current={pathname===`/master/${id}`?'page':undefined}>{label}</Link>)}</nav></details>
+        {visible
+          .filter((m) => !m.href.startsWith("/master"))
+          .map((m) => (
+            <Link
+              key={m.key}
+              href={m.href}
+              aria-current={key === m.key ? "page" : undefined}
+            >
+              {m.label}
+            </Link>
+          ))}
+        {visible.some((m) => m.href.startsWith("/master")) && (
+          <details className="master-nav" open={pathname.startsWith("/master")}>
+            <summary>Master</summary>
+            <nav>
+              {visible
+                .filter((m) => m.href.startsWith("/master"))
+                .map((m) => (
+                  <Link
+                    key={m.key}
+                    href={m.href}
+                    aria-current={pathname === m.href ? "page" : undefined}
+                  >
+                    {m.label}
+                  </Link>
+                ))}
+            </nav>
+          </details>
+        )}
       </aside>
 
       <header className="topbar">
-        <div>
-          <strong>{hello}{user?.name ? `, ${user.name}` : ""}</strong>
+        <button
+          className="icon-button mobile-nav-toggle"
+          aria-label="Open navigation"
+          aria-expanded={mobile}
+          aria-controls="app-navigation"
+          onClick={() => setMobile(!mobile)}
+        >
+          <Menu size={21} />
+        </button>
+        <div className="greeting">
+          <strong>
+            {hello}
+            {user?.name ? `, ${user.name}` : ""}
+          </strong>
           <span>{user?.email || "Welcome back"}</span>
         </div>
-        <div className="profile-menu">
-          <button className="profile-trigger" onClick={() => setOpen(!open)} aria-expanded={open}>
-            {user?.profileImageUrl ? <img src={user.profileImageUrl} alt=""/> : <span>{initials(user?.name)}</span>}
-            <strong>{user?.name || "Profile"}</strong>
-            <ChevronDown size={16}/>
+        <div className="header-actions">
+          <button
+            className="icon-button theme-toggle"
+            title={dark ? "Switch to light mode" : "Switch to dark mode"}
+            aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+            onClick={() => {
+              setDark(!dark);
+              localStorage.setItem("dbc_theme", dark ? "light" : "dark");
+            }}
+          >
+            {dark ? <Sun size={20} /> : <Moon size={20} />}
           </button>
-          {open ? (
-            <div className="profile-dropdown">
-              <div className="profile-card-top">
-                {user?.profileImageUrl ? <img src={user.profileImageUrl} alt=""/> : <span>{initials(user?.name)}</span>}
-                <strong>{user?.name || "User"}</strong>
-                <small>{user?.role || "Member"}</small>
+          <div className="profile-menu">
+            <button
+              className="profile-trigger"
+              onClick={() => setOpen(!open)}
+              aria-expanded={open}
+            >
+              {user?.profileImageUrl ? (
+                <img src={user.profileImageUrl} alt="" />
+              ) : (
+                <span>{initials(user?.name)}</span>
+              )}
+              <strong>{user?.name || "Profile"}</strong>
+              <ChevronDown size={16} />
+            </button>
+            {open ? (
+              <div className="profile-dropdown">
+                <div className="profile-card-top">
+                  {user?.profileImageUrl ? (
+                    <img src={user.profileImageUrl} alt="" />
+                  ) : (
+                    <span>{initials(user?.name)}</span>
+                  )}
+                  <strong>{user?.name || "User"}</strong>
+                  <small>{user?.role || "Member"}</small>
+                </div>
+                <Link
+                  className="profile-password-link"
+                  href="/change-password"
+                  onClick={() => setOpen(false)}
+                >
+                  <KeyRound size={15} /> Change password
+                </Link>
+                <div className="profile-card-actions">
+                  <Link href="/profile" onClick={() => setOpen(false)}>
+                    Update
+                  </Link>
+                  <button onClick={logout}>Sign out</button>
+                </div>
               </div>
-              <Link className="profile-password-link" href="/change-password" onClick={() => setOpen(false)}><KeyRound size={15}/> Change password</Link>
-              <div className="profile-card-actions">
-                <Link href="/profile" onClick={() => setOpen(false)}>Update</Link>
-                <button onClick={logout}>Sign out</button>
-              </div>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
         </div>
       </header>
+      {(!ready || !allowed) && (
+        <section className="access-notice" role="status">
+          {!ready ? (
+            "Loading account..."
+          ) : (
+            <>
+              <h1>Access restricted</h1>
+              <p>
+                Your account does not have access to this menu. Contact an
+                administrator to update your permissions.
+              </p>
+            </>
+          )}
+        </section>
+      )}
     </>
   );
 }

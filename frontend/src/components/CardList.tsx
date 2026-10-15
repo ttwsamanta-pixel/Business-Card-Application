@@ -28,7 +28,10 @@ import {
   type Management,
 } from "@/lib/management";
 import type { CardProfile } from "@/lib/templates";
+import { canAccess, type SessionUser } from '@/lib/permissions';
 export function CardList({ overview = false }: { overview?: boolean }) {
+  const [user,setUser]=useState<SessionUser>();
+  useEffect(()=>{endpoints.me().then(r=>setUser(r.user)).catch(()=>{});},[]);
   const [data, setData] = useState<Management>({
     cards: [],
     folders: [],
@@ -119,15 +122,15 @@ export function CardList({ overview = false }: { overview?: boolean }) {
   const signature = (c: CardProfile) =>
     `<table cellpadding="6"><tr><td><strong>${escape(c.fullName)}</strong><br>${escape(c.designation)}<br>${escape(c.company)}<br>${escape(c.email)}<br>${escape(c.phone)}<br><a href="${escape(publicCardUrl(c.slug))}">View my digital business card</a></td></tr></table>`;
   return (
-    <main className="dashboard-layout qr-admin">
+    <main className={`dashboard-layout qr-admin ${canAccess(user,'cards')?'':'no-cards'} ${canAccess(user,'folders')?'':'no-folders'} ${canAccess(user,'analytics')?'':'no-analytics'}`}>
       <AppNav />
       <section className="main qr-main management-main">
         <div className="qr-page-actions">
           <h1>{overview ? "Overview" : "Cards"}</h1>
-          <Link className="btn" href="/editor/new">
+          {canAccess(user,'cards')&&<Link className="btn" href="/editor/new">
             <Plus size={17} />
             Create New Card
-          </Link>
+          </Link>}
         </div>
         {error && (
           <div className="error" role="alert">
@@ -163,7 +166,7 @@ export function CardList({ overview = false }: { overview?: boolean }) {
                 </strong>
               </div>
             </div>
-            <section className="qr-section">
+            {canAccess(user,'folders')&&<section className="qr-section">
               <div className="qr-page-actions">
                 <h2>Folders</h2>
                 <Link href="/master/folders">Manage Folders</Link>
@@ -186,7 +189,7 @@ export function CardList({ overview = false }: { overview?: boolean }) {
                 ))}
                 {!data.folders.length && <p>No folders yet.</p>}
               </div>
-            </section>
+            </section>}
           </>
         )}
         <section className="card-list-section">
@@ -412,7 +415,7 @@ export function CardList({ overview = false }: { overview?: boolean }) {
                           Duplicate
                         </button>
                         <button
-                          disabled={busy}
+                          disabled={busy||!canAccess(user,'folders')}
                           onClick={() => {
                             setMove([card.id!]);
                             setDestination(card.folderId || "");

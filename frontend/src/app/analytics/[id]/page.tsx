@@ -110,10 +110,10 @@ export default function AnalyticsPage() {
     [notice, setNotice] = useState("");
   const cards =
       management?.cards.filter((c) =>
-        folderId ? c.folderId === folderId : c.id === id,
+        id==='all'||(folderId ? c.folderId === folderId : c.id === id),
       ) || [],
     card = cards[0];
-  const title = folderId
+  const title = id==='all'?'All Cards':folderId
     ? management?.folders.find((f) => f.id === folderId)?.name
     : card?.fullName;
   useEffect(() => {
@@ -129,6 +129,7 @@ export default function AnalyticsPage() {
       [folderId ? "folderId" : "cardId"]: folderId || id,
       tz,
     });
+    if(id==='all')query.delete('cardId');
     try {
       if (from) query.set("from", boundary(from, tz));
       if (to) query.set("to", boundary(to, tz, true));
@@ -142,7 +143,7 @@ export default function AnalyticsPage() {
         const m = await api<Management>("/management");
         const r = await api<Report>(`/management/analytics?${query}`);
         const selected = m.cards.filter((c) =>
-          folderId ? c.folderId === folderId : c.id === id,
+          id==='all'||(folderId ? c.folderId === folderId : c.id === id),
         );
         const positions: Point[] = [];
         for (const c of selected)
@@ -251,9 +252,9 @@ export default function AnalyticsPage() {
         )}
         <section className="analytics-card hero-card">
           <div>
-            <strong>{folderId ? "Folder" : "Digital Business Card"}</strong>
+            <strong>{id==='all'?'All Cards':folderId ? "Folder" : "Digital Business Card"}</strong>
             <h1>{title}</h1>
-            {!folderId && card && (
+            {id!=='all'&&!folderId && card && (
               <>
                 <p>
                   <CalendarDays size={14} />
@@ -274,9 +275,9 @@ export default function AnalyticsPage() {
             )}
             {folderId && <p>{cards.length} cards</p>}
           </div>
-          {!folderId && <OwnerQr id={card?.id} updatedAt={card?.updatedAt} />}
+          {id!=='all'&&!folderId && <OwnerQr id={card?.id} updatedAt={card?.updatedAt} />}
         </section>
-        {!folderId && card && (
+        {id!=='all'&&!folderId && card && (
           <form
             className="campaign-controls"
             onSubmit={async (e) => {

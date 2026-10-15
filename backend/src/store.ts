@@ -7,6 +7,10 @@ import { uniqueSlug } from "./utils/slug.js";
 import { defaultMasters, type MasterItem } from './masters.js';
 
 export interface Store {
+  getPermissions(id:string):Promise<string[]|undefined>;
+  setPermissions(id:string,permissions:string[]):Promise<void>;
+  editUser(id:string,input:{name:string;email:string;role:Role;status:'active'|'disabled'}):Promise<void>;
+  listTemplates():Promise<typeof templates>;
   listFolders(userId:string):Promise<CardFolder[]>;
   saveFolder(userId:string,id:string,name:string):Promise<void>;
   deleteFolder(userId:string,id:string):Promise<void>;
@@ -65,6 +69,11 @@ function campaignActive(card:BusinessCard){
 export type CardFolder={id:string;name:string;createdAt:string;updatedAt:string};
 export type CardEvent={id:string;cardId:string;kind:'view'|'link'|'contact'|'form';visitor:string;createdAt:string;details:{url?:string;device?:string;browser?:string;country?:string;region?:string;city?:string;latitude?:number;longitude?:number}};
 export class MemoryStore implements Store {
+  private permissions = new Map<string,string[]>();
+  async getPermissions(id:string){return this.permissions.get(id);}
+  async setPermissions(id:string,permissions:string[]){this.permissions.set(id,permissions);}
+  async editUser(id:string,input:{name:string;email:string;role:Role;status:'active'|'disabled'}){const user=this.users.get(id);if(user)Object.assign(user,input,{email:input.email.toLowerCase()});}
+  async listTemplates(){return templates.map(t=>({...t}));}
   private folders=new Map<string,CardFolder & {userId:string}>();
   private members=new Map<string,string>();
   private events:CardEvent[]=[];
@@ -251,6 +260,10 @@ export class MemoryStore implements Store {
 }
 
 export class MySqlStore extends MemoryStore {
+  async getPermissions(id:string):Promise<string[]|undefined>{const [rows]=await this.pool.execute<mysql.RowDataPacket[]>('SELECT permissions FROM user_menu_permissions WHERE user_id=?',[id]);const value=rows[0]?.permissions;return typeof value==='string'?JSON.parse(value):value;}
+  async setPermissions(id:string,permissions:string[]){await this.pool.execute('INSERT INTO user_menu_permissions(user_id,permissions) VALUES(?,?) ON DUPLICATE KEY UPDATE permissions=VALUES(permissions)',[id,JSON.stringify(permissions)]);}
+  async editUser(id:string,input:{name:string;email:string;role:Role;status:'active'|'disabled'}){await this.pool.execute('UPDATE users SET name=?,email=?,role=?,status=? WHERE id=?',[input.name,input.email.toLowerCase(),input.role,input.status,id]);}
+  async listTemplates(){const [rows]=await this.pool.query<mysql.RowDataPacket[]>('SELECT id,is_active FROM card_templates');return templates.map(t=>({...t,active:Boolean(rows.find(r=>r.id===t.id)?.is_active)}));}
   async listFolders(userId:string):Promise<CardFolder[]>{const [rows]=await this.pool.execute<mysql.RowDataPacket[]>('SELECT id,name,created_at AS createdAt,updated_at AS updatedAt FROM card_folders WHERE user_id=? ORDER BY name',[userId]);return rows as CardFolder[];}
   async saveFolder(userId:string,id:string,name:string){await this.pool.execute('INSERT INTO card_folders(id,user_id,name) VALUES(?,?,?) ON DUPLICATE KEY UPDATE name=VALUES(name)',[id,userId,name]);}
   async deleteFolder(userId:string,id:string){await this.pool.execute('DELETE FROM card_folders WHERE id=? AND user_id=?',[id,userId]);}

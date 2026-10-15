@@ -14,7 +14,7 @@ import { ContentEditor } from "@/components/ContentEditor";
 import { DesignEditor } from '@/components/DesignEditor';
 import { QrEditor, QrPreview } from '@/components/QrEditor';
 import { MasterProvider } from "@/lib/masters";
-import { endpoints, publicCardUrl } from "@/lib/api";
+import { api, endpoints, publicCardUrl } from "@/lib/api";
 import { initialContent } from "@/lib/card-content";
 import { emptyCard, templates, type CardProfile } from "@/lib/templates";
 
@@ -29,6 +29,7 @@ function Editor() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [card, setCard] = useState<CardProfile>(emptyCard);
+  const [availableTemplates,setAvailableTemplates]=useState<typeof templates>([]);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -43,6 +44,10 @@ function Editor() {
     if([1,2,3].includes(requestedStep))setStep(requestedStep);
     (async () => {
       try {
+        const available=await api<{id:string}[]>('/templates');
+        const choices=templates.filter(t=>available.some(a=>a.id===t.id));
+        if(active)setAvailableTemplates(choices);
+        if(params.id==='new'&&!choices.length)throw new Error('No templates are enabled. Contact an administrator.');
         const loaded =
           params.id === "new"
             ? {
@@ -52,6 +57,7 @@ function Editor() {
                   emptyCard.templateId,
               }
             : await endpoints.card(params.id);
+        if(params.id==='new'&&!choices.some(t=>t.id===loaded.templateId))loaded.templateId=choices[0].id;
         if (active)
           setCard({
             ...loaded,
@@ -170,7 +176,7 @@ function Editor() {
                           <ChevronLeft size={20} />
                         </button>
                         <div className="template-picker" ref={scroller}>
-                          {templates.map((template) => (
+                          {availableTemplates.map((template) => (
                             <button
                               key={template.id}
                               className={

@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth.js";
 import { store } from "../store.js";
-import { templateById } from "../templates.js";
 import { cardPatchSchema, cardSchema } from "../validation.js";
 import { fail, ok } from "../utils/http.js";
 import { uniqueSlug } from "../utils/slug.js";
@@ -27,7 +26,7 @@ cardRouter.post("/", async (req, res) => {
   const body = parsed.data;
   if(body.theme)try{body.theme=await prepareTheme(body.theme);}catch(e){return fail(res,422,(e as Error).message);}
   if(body.content)body.content=applyMasterDefaults(body.content,await store.listMasters());
-  if (!templateById(body.templateId))
+  if (!(await store.listTemplates()).some(t=>t.id===body.templateId&&t.active))
     return fail(res, 422, "Selected template is not available");
   const card = await store.createCard(req.user!.id, {
     ...body,
@@ -68,7 +67,7 @@ cardRouter.put("/:id", async (req, res) => {
   if(!previous)return fail(res,404,'Card not found');
   if(body.theme)try{body.theme=await prepareTheme(body.theme,previous.theme);}catch(e){return fail(res,422,(e as Error).message);}
   if(body.content)body.content=applyMasterDefaults(body.content,await store.listMasters());
-  if (body.templateId && !templateById(body.templateId))
+  if (body.templateId && body.templateId!==previous.templateId && !(await store.listTemplates()).some(t=>t.id===body.templateId&&t.active))
     return fail(res, 422, "Selected template is not available");
   const card = await store.updateCard(req.user!.id, req.params.id, body);
   if (!card) return fail(res, 404, "Card not found");
