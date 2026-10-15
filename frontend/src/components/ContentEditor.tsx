@@ -109,6 +109,92 @@ export function PhotoUpload({
     </div>
   );
 }
+function GalleryUpload({
+  remaining,
+  onAppend,
+  onBusy,
+}: {
+  remaining: number;
+  onAppend: (photos: ContentSection["items"]) => void;
+  onBusy: (busy: boolean) => void;
+}) {
+  const input = useRef<HTMLInputElement>(null);
+  const latest = useRef(onAppend);
+  latest.current = onAppend;
+  const [progress, setProgress] = useState("");
+  const [error, setError] = useState("");
+  const [uploading, setUploading] = useState(false);
+  return (
+    <div className="editor-gallery-upload">
+      <button
+        type="button"
+        className="outline-action"
+        disabled={uploading || remaining <= 0}
+        onClick={() => input.current?.click()}
+      >
+        <Plus size={15} /> Add Photos
+      </button>
+      <input
+        ref={input}
+        type="file"
+        multiple
+        hidden
+        aria-label="Gallery photos"
+        accept="image/png,image/jpeg,image/webp,image/gif"
+        onChange={async (e) => {
+          const files = Array.from(e.target.files || []);
+          e.target.value = "";
+          if (!files.length) return;
+          setError("");
+          if (files.length > remaining) {
+            setError(`You can add ${remaining} more photos (100 per section).`);
+            return;
+          }
+          setUploading(true);
+          onBusy(true);
+          const photos: ContentSection["items"] = [];
+          const errors: string[] = [];
+          try {
+            for (let index = 0; index < files.length; index++) {
+              const file = files[index];
+              setProgress(`Uploading ${index + 1} of ${files.length}...`);
+              try {
+                if (
+                  ![
+                    "image/png",
+                    "image/jpeg",
+                    "image/webp",
+                    "image/gif",
+                  ].includes(file.type)
+                )
+                  throw new Error("Choose a PNG, JPEG, WebP or GIF image.");
+                const uploaded = await uploadImage(file);
+                photos.push(item({ url: uploaded.publicUrl, alt: "" }));
+              } catch (err) {
+                errors.push(
+                  `${file.name}: ${err instanceof Error ? err.message : "Upload failed"}`,
+                );
+              }
+            }
+            if (photos.length) latest.current(photos);
+            setProgress(`${photos.length} of ${files.length} photos added.`);
+            setError(errors.join(" "));
+          } finally {
+            setUploading(false);
+            onBusy(false);
+          }
+        }}
+      />
+      {progress ? <p role="status">{progress}</p> : null}
+      {error ? (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 type Field = {
   key: string;
   label: string;
@@ -510,7 +596,18 @@ export function ContentEditor({
                     />
                   </div>
                 ))}
-                {section.type !== "text" ? (
+                {section.type === "images" ? (
+                  <GalleryUpload
+                    remaining={100 - section.items.length}
+                    onBusy={onBusy}
+                    onAppend={(photos) =>
+                      update(section.id, {
+                        enabled: true,
+                        items: [...section.items, ...photos],
+                      })
+                    }
+                  />
+                ) : section.type !== "text" ? (
                   <button
                     className="outline-action"
                     onClick={() =>
@@ -523,11 +620,7 @@ export function ContentEditor({
                     }
                   >
                     <Plus size={15} />
-                    {section.type === "images"
-                      ? "Add Photo"
-                      : section.type === "lead"
-                        ? "Add Field"
-                        : "Add More"}
+                    {section.type === "lead" ? "Add Field" : "Add More"}
                   </button>
                 ) : null}
                 {section.type === "lead" ? (
