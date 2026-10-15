@@ -39,6 +39,8 @@ function Editor() {
   useEffect(() => {
     let active = true;
     setLoading(true);
+    const requestedStep=Number(new URLSearchParams(location.search).get('step'));
+    if([1,2,3].includes(requestedStep))setStep(requestedStep);
     (async () => {
       try {
         const loaded =
@@ -72,7 +74,7 @@ function Editor() {
   };
   const busy = (value: boolean) =>
     setUploads((count) => count + (value ? 1 : -1));
-  const save = async (publish = false) => {
+  const save = async (publish = false, returnToList = false) => {
     if (saving || uploads) return;
     setSaving(true);
     setError("");
@@ -85,7 +87,8 @@ function Editor() {
       const result = publish ? await endpoints.publishCard(saved.id!) : saved;
       setCard(result);
       setMessage(publish ? "Card published." : "Draft saved.");
-      if (params.id === "new") router.replace(`/editor/${saved.id}`);
+      if(returnToList)router.push('/cards');
+      else if (params.id === "new") router.replace(`/editor/${saved.id}`);
       return result;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Save failed");
@@ -175,13 +178,10 @@ function Editor() {
                               }
                               aria-pressed={card.templateId === template.id}
                               onClick={() =>
-                                change({ templateId: template.id })
+                                change({ templateId: template.id,theme:{...card.theme,accent:template.accent,background:'',backgroundMedia:''} })
                               }
                             >
-                              <CardRenderer
-                                compact
-                                card={{ ...card, templateId: template.id }}
-                              />
+                              <div className="template-miniature" aria-hidden="true" inert><div><CardRenderer card={{ ...card, content:card.content?.filter(s=>s.type!=='lead'),theme:{}, status:'draft', templateId: template.id }}/></div></div>
                               <span>{template.name}</span>
                             </button>
                           ))}
@@ -226,7 +226,7 @@ function Editor() {
                   <button
                     className="btn"
                     disabled={saving || uploads > 0}
-                    onClick={() => save(true)}
+                    onClick={() => save(true,true)}
                   >
                     <Save size={16} />
                     {saving ? "Saving..." : "Publish"}
@@ -265,7 +265,7 @@ function Editor() {
                 <button
                   className="btn"
                   disabled={saving || uploads > 0}
-                  onClick={() => save()}
+                  onClick={() => save(false,true)}
                 >
                   {uploads ? "Uploading..." : saving ? "Saving..." : "Save"}
                 </button>

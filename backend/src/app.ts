@@ -13,6 +13,7 @@ import { adminRouter } from "./routes/admin.routes.js";
 import { uploadRouter } from "./routes/upload.routes.js";
 import { masterRouter } from './routes/master.routes.js';
 import { designRouter } from './routes/design.routes.js';
+import { managementRouter } from './routes/management.routes.js';
 import { fail } from "./utils/http.js";
 
 export const app = express();
@@ -39,6 +40,7 @@ app.use("/api/uploads", uploadRouter);
 app.use("/api/admin", adminRouter);
 app.use('/api/masters',masterRouter);
 app.use('/api/design',designRouter);
+app.use('/api/management',managementRouter);
 
 app.use((_req, res) => fail(res, 404, "Route not found"));
 

@@ -33,7 +33,7 @@ designRouter.post("/presets", async (req, res, next) => {
       return fail(res, 422, "Maximum 50 saved styles");
     const clean = Object.fromEntries(
       Object.entries(parsed.data.settings).filter(
-        ([key]) => !key.startsWith("passcode") && key !== "hasPasscode",
+        ([key]) => !key.startsWith("passcode") && !key.startsWith("campaign") && key !== "hasPasscode",
       ),
     );
     const preset = { ...parsed.data, settings: clean, id: randomUUID() };

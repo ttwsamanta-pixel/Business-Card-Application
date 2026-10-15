@@ -16,7 +16,7 @@ import { CardDesign } from './CardDesign';
 import { safeColor } from '@/lib/design';
 import type { CardProfile } from "@/lib/templates";
 import { templateFor } from "@/lib/templates";
-import { publicApiAsset, publicCardUrl } from "@/lib/api";
+import { publicApiAsset, publicCardUrl, api } from "@/lib/api";
 import { ContentSections, LeadForm } from "./ContentSections";
 import { PublicCardDialog } from "./PublicCardDialog";
 
@@ -89,6 +89,12 @@ export function CardRenderer({
 
   return (
     <article
+      onClickCapture={publicMode ? (event)=>{
+        const anchor=(event.target as HTMLElement).closest('a');
+        if(anchor && /^(https?:|mailto:|tel:)/i.test(anchor.href) && !anchor.href.includes('/api/public/')) {
+          void api(`/public/cards/${card.slug}/events`,{method:'POST',keepalive:true,body:JSON.stringify({kind:'link',url:anchor.href})}).catch(()=>{});
+        }
+      }:undefined}
       className={`business-card ${scope} ${publicMode ? "public-business-card" : ""} ${compact ? "compact" : ""} theme-${template.bg} layout-${template.layout}`}
       style={
         {

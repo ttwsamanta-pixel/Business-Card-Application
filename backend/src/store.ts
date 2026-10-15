@@ -7,6 +7,13 @@ import { uniqueSlug } from "./utils/slug.js";
 import { defaultMasters, type MasterItem } from './masters.js';
 
 export interface Store {
+  listFolders(userId:string):Promise<CardFolder[]>;
+  saveFolder(userId:string,id:string,name:string):Promise<void>;
+  deleteFolder(userId:string,id:string):Promise<void>;
+  assignFolder(cardId:string,folderId:string|null):Promise<void>;
+  folderMembers(userId:string):Promise<{cardId:string;folderId:string}[]>;
+  addEvent(event:CardEvent):Promise<void>;
+  listEvents(userId:string):Promise<CardEvent[]>;
   listPresets(userId:string):Promise<DesignPreset[]>;
   savePreset(userId:string,preset:DesignPreset):Promise<void>;
   deletePreset(userId:string,id:string):Promise<void>;
@@ -51,7 +58,23 @@ function sqlValues(values: unknown[]) {
 }
 
 export type DesignPreset={id:string;name:string;kind:string;settings:Record<string,string>};
+function campaignActive(card:BusinessCard){
+ const start=card.theme?.campaignStart,end=card.theme?.campaignEnd,now=Date.now();
+ return (!start||now>=new Date(`${start}T00:00:00+05:30`).getTime())&&(!end||now<=new Date(`${end}T23:59:59.999+05:30`).getTime());
+}
+export type CardFolder={id:string;name:string;createdAt:string;updatedAt:string};
+export type CardEvent={id:string;cardId:string;kind:'view'|'link'|'contact'|'form';visitor:string;createdAt:string;details:{url?:string;device?:string;browser?:string;country?:string;region?:string;city?:string;latitude?:number;longitude?:number}};
 export class MemoryStore implements Store {
+  private folders=new Map<string,CardFolder & {userId:string}>();
+  private members=new Map<string,string>();
+  private events:CardEvent[]=[];
+  async listFolders(userId:string):Promise<CardFolder[]>{return [...this.folders.values()].filter(f=>f.userId===userId);}
+  async saveFolder(userId:string,id:string,name:string){const old=this.folders.get(id);this.folders.set(id,{id,name,userId,createdAt:old?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()});}
+  async deleteFolder(userId:string,id:string){if(this.folders.get(id)?.userId===userId){this.folders.delete(id);for(const [card,folder] of this.members)if(folder===id)this.members.delete(card);}}
+  async assignFolder(cardId:string,folderId:string|null){if(folderId)this.members.set(cardId,folderId);else this.members.delete(cardId);}
+  async folderMembers(userId:string){const cards=await this.listCards(userId);return [...this.members].filter(([id])=>cards.some(c=>c.id===id)).map(([cardId,folderId])=>({cardId,folderId}));}
+  async addEvent(event:CardEvent){this.events.push(event);}
+  async listEvents(userId:string){const cards=await this.listCards(userId);return this.events.filter(e=>cards.some(c=>c.id===e.cardId));}
   private presets=new Map<string,DesignPreset[]>();
   private visits:{cardId:string;createdAt:string;latitude?:number;longitude?:number;accuracy?:number}[]=[];
   async listPresets(userId:string){return this.presets.get(userId)||[];}
@@ -187,7 +210,7 @@ export class MemoryStore implements Store {
   }
 
   async getPublicCard(slug: string) {
-    return [...this.cards.values()].find((card) => card.slug === slug && card.status === "published");
+    return [...this.cards.values()].find((card) => card.slug === slug && card.status === "published" && campaignActive(card));
   }
 
   async updateCard(userId: string, id: string, data: Partial<BusinessCard>) {
@@ -228,6 +251,13 @@ export class MemoryStore implements Store {
 }
 
 export class MySqlStore extends MemoryStore {
+  async listFolders(userId:string):Promise<CardFolder[]>{const [rows]=await this.pool.execute<mysql.RowDataPacket[]>('SELECT id,name,created_at AS createdAt,updated_at AS updatedAt FROM card_folders WHERE user_id=? ORDER BY name',[userId]);return rows as CardFolder[];}
+  async saveFolder(userId:string,id:string,name:string){await this.pool.execute('INSERT INTO card_folders(id,user_id,name) VALUES(?,?,?) ON DUPLICATE KEY UPDATE name=VALUES(name)',[id,userId,name]);}
+  async deleteFolder(userId:string,id:string){await this.pool.execute('DELETE FROM card_folders WHERE id=? AND user_id=?',[id,userId]);}
+  async assignFolder(cardId:string,folderId:string|null){if(folderId)await this.pool.execute('INSERT INTO card_folder_members(card_id,folder_id) VALUES(?,?) ON DUPLICATE KEY UPDATE folder_id=VALUES(folder_id)',[cardId,folderId]);else await this.pool.execute('DELETE FROM card_folder_members WHERE card_id=?',[cardId]);}
+  async folderMembers(userId:string){const [rows]=await this.pool.execute<mysql.RowDataPacket[]>('SELECT m.card_id AS cardId,m.folder_id AS folderId FROM card_folder_members m JOIN business_cards c ON c.id=m.card_id WHERE c.user_id=?',[userId]);return rows as {cardId:string;folderId:string}[];}
+  async addEvent(e:CardEvent){await this.pool.execute('INSERT INTO card_events(id,card_id,kind,visitor,details,created_at) VALUES(?,?,?,?,?,?)',[e.id,e.cardId,e.kind,e.visitor,JSON.stringify(e.details),new Date(e.createdAt)]);}
+  async listEvents(userId:string):Promise<CardEvent[]>{const [rows]=await this.pool.execute<mysql.RowDataPacket[]>('SELECT e.* FROM card_events e JOIN business_cards c ON c.id=e.card_id WHERE c.user_id=? ORDER BY e.created_at',[userId]);return rows.map(r=>({id:r.id,cardId:r.card_id,kind:r.kind,visitor:r.visitor,createdAt:r.created_at.toISOString(),details:typeof r.details==='string'?JSON.parse(r.details):r.details}));}
   async listPresets(userId:string):Promise<DesignPreset[]>{const [rows]=await this.pool.execute<mysql.RowDataPacket[]>('SELECT id,name,kind,settings FROM design_presets WHERE user_id=?',[userId]);return rows.map(r=>({id:r.id,name:r.name,kind:r.kind,settings:typeof r.settings==='string'?JSON.parse(r.settings):r.settings}));}
   async savePreset(userId:string,p:DesignPreset){await this.pool.execute('INSERT INTO design_presets (id,user_id,name,kind,settings) VALUES (?,?,?,?,?)',[p.id,userId,p.name,p.kind,JSON.stringify(p.settings)]);}
   async deletePreset(userId:string,id:string){await this.pool.execute('DELETE FROM design_presets WHERE id=? AND user_id=?',[id,userId]);}
@@ -341,7 +371,8 @@ export class MySqlStore extends MemoryStore {
 
   async getPublicCard(slug: string) {
     const [rows] = await this.pool.execute<mysql.RowDataPacket[]>("SELECT * FROM business_cards WHERE slug = ? AND status = 'published' LIMIT 1", [slug]);
-    return rows[0] ? this.rowToCard(rows[0]) : undefined;
+    const card=rows[0]?await this.rowToCard(rows[0]):undefined;
+    return card&&campaignActive(card)?card:undefined;
   }
 
   async updateCard(userId: string, id: string, data: Partial<BusinessCard>) {

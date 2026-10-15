@@ -1,5 +1,9 @@
 export type SocialLink = { id?: string; platform: string; url: string };
 export type CardProfile = {
+  createdAt?: string;
+  updatedAt?: string;
+  folderId?: string;
+  scans?: number;
   content?: import('./card-content').ContentSection[];
   id?: string;
   templateId: string;

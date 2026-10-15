@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Menu, MapPin, X } from "lucide-react";
 import { api } from "@/lib/api";
 import type { CardProfile } from "@/lib/templates";
@@ -23,6 +23,7 @@ export function CardDesign({
   const [loading, setLoading] = useState(false);
   const [menu, setMenu] = useState(false);
   const [location, setLocation] = useState("");
+  const visit = useRef('');
   useEffect(() => {
     if (!publicMode || !t.loaderImage) return;
     setLoading(true);
@@ -37,11 +38,8 @@ export function CardDesign({
   }, [publicMode, t.loaderImage, scope]);
   useEffect(() => {
     if (!publicMode || !card.slug) return;
-    const key = `card-visit-${card.id}`;
-    try {
-      if (sessionStorage.getItem(key)) return;
-      sessionStorage.setItem(key, "1");
-    } catch {}
+    if(visit.current===card.slug)return;
+    visit.current=card.slug;
     api(`/public/cards/${card.slug}/visits`, {
       method: "POST",
       body: "{}",

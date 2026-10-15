@@ -51,9 +51,9 @@ export function AppNav() {
         </Link>
         <Link href="/dashboard">Dashboard</Link>
         <Link href="/templates">Templates</Link>
-        <Link href="/editor/new">Create Card</Link>
+        <Link href="/cards" aria-current={pathname==='/cards'?'page':undefined}>Cards</Link>
         {user?.role === "admin" ? <Link href="/admin">Users</Link> : null}
-        {user?.role === 'admin' ? <details className="master-nav" open={pathname.startsWith('/master')}><summary>Master</summary><nav>{masterCategories.map(([id,label])=><Link key={id} href={`/master/${id}`} aria-current={pathname===`/master/${id}`?'page':undefined}>{label}</Link>)}</nav></details>:null}
+        <details className="master-nav" open={pathname.startsWith('/master')}><summary>Master</summary><nav><Link href="/master/folders" aria-current={pathname==='/master/folders'?'page':undefined}>Folders</Link>{user?.role==='admin'&&masterCategories.map(([id,label])=><Link key={id} href={`/master/${id}`} aria-current={pathname===`/master/${id}`?'page':undefined}>{label}</Link>)}</nav></details>
       </aside>
 
       <header className="topbar">

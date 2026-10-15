@@ -113,8 +113,7 @@ cardRouter.delete("/:id", async (req, res) => {
 
 cardRouter.get("/:id/qr.png", async (req, res) => {
   const card = await store.getCardForUser(req.user!.id, req.params.id);
-  if (!card || card.status !== "published")
-    return fail(res, 404, "Published card not found");
+  if (!card) return fail(res, 404, "Card not found");
   const dataUrl = await qrPngDataUrl(
     `${process.env.APP_URL || "http://localhost:3000"}/card/${card.slug}`,
     card.theme,
@@ -125,8 +124,7 @@ cardRouter.get("/:id/qr.png", async (req, res) => {
 
 cardRouter.get("/:id/qr.svg", async (req, res) => {
   const card = await store.getCardForUser(req.user!.id, req.params.id);
-  if (!card || card.status !== "published")
-    return fail(res, 404, "Published card not found");
+  if (!card) return fail(res, 404, "Card not found");
   res
     .type("svg")
     .send(
