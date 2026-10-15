@@ -86,6 +86,7 @@ jobs:
           port: ${{ secrets.CLOUDWAYS_SSH_PORT }}
           script_stop: true
           script: |
+            set -e
             export NVM_DIR="$HOME/.nvm"
             . "$NVM_DIR/nvm.sh"
             nvm use 22
@@ -98,3 +99,6 @@ jobs:
             pm2 restart qr-api --update-env || pm2 start backend/dist/server.js --name qr-api --update-env
             pm2 restart qr-frontend --update-env || pm2 start npm --name qr-frontend -- run start --workspace frontend
             pm2 save
+
+            curl --fail --silent --show-error --retry 10 --retry-connrefused --retry-delay 2 http://127.0.0.1:4000/health
+            curl --fail --silent --show-error --retry 10 --retry-connrefused --retry-delay 2 --output /dev/null http://127.0.0.1:3000/
