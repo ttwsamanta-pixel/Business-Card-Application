@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { randomUUID } from "crypto";
 import { z } from "zod";
-import { authenticate, requireAdmin } from "../middleware/auth.js";
+import { authenticate } from "../middleware/auth.js";
 import { masterGroups } from "../masters.js";
 import { store } from "../store.js";
 import { ok, fail } from "../utils/http.js";
@@ -45,7 +45,7 @@ masterRouter.get("/", async (_req, res, next) => {
     next(error);
   }
 });
-masterRouter.post("/", requireAdmin, async (req, res, next) => {
+masterRouter.post("/", async (req, res, next) => {
   try {
     const parsed = schema.safeParse(req.body);
     if (!parsed.success)
@@ -57,7 +57,7 @@ masterRouter.post("/", requireAdmin, async (req, res, next) => {
     next(error);
   }
 });
-masterRouter.put("/:id", requireAdmin, async (req, res, next) => {
+masterRouter.put("/:id", async (req, res, next) => {
   try {
     const parsed = schema.safeParse(req.body);
     if (!parsed.success)

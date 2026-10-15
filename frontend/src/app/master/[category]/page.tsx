@@ -7,6 +7,7 @@ import { PhotoUpload, Switch } from "@/components/ContentEditor";
 import { MasterIcon, masterIconKeys } from "@/components/MasterIcon";
 import { api, endpoints } from "@/lib/api";
 import { type MasterCatalog, type MasterItem } from "@/lib/masters";
+import { canAccess } from '@/lib/permissions';
 
 export default function MasterPage() {
   const { category } = useParams<{ category: string }>();
@@ -31,7 +32,7 @@ export default function MasterPage() {
     Promise.all([endpoints.me(), api<MasterCatalog>("/masters")])
       .then(([me, data]) => {
         if (active) {
-          setAllowed(me.user.role === "admin");
+          setAllowed(canAccess(me.user, `master:${category}`));
           setCatalog(data);
         }
       })
@@ -113,7 +114,7 @@ export default function MasterPage() {
         {!loaded ? (
           <p>Loading...</p>
         ) : !allowed ? (
-          <p>Administrator access required.</p>
+          <p>You do not have permission to manage this master list.</p>
         ) : !group ? (
           <p>Master list not found.</p>
         ) : (

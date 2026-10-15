@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import { app } from "./app.js";
 import { store } from "./store.js";
 import { signUserToken } from "./middleware/auth.js";
+import { masterGroups } from "./masters.js";
 
 async function account(role: "user" | "admin", suffix: string) {
   const user = await store.createUser({
@@ -14,6 +15,80 @@ async function account(role: "user" | "admin", suffix: string) {
   return { user, auth: { Authorization: `Bearer ${signUserToken(user.id)}` } };
 }
 describe("menu permissions and account management", () => {
+  it("lets regular users manage explicitly assigned master categories, including revocation", async () => {
+    const admin = await account("admin", "master-granter"),
+      member = await account("user", "master-delegate");
+    const draft = {
+      category: "social",
+      value: "URL",
+      label: "Delegated option",
+      subtitle: "",
+      iconKey: "globe",
+      iconUrl: "",
+      active: true,
+      sortOrder: 1,
+    };
+    expect(
+      (await request(app).post("/api/masters").set(member.auth).send(draft))
+        .status,
+    ).toBe(403);
+    const permissions = masterGroups.map((g) => `master:${g.id}`);
+    expect(
+      (
+        await request(app)
+          .put(`/api/admin/users/${member.user.id}/permissions`)
+          .set(admin.auth)
+          .send({ permissions })
+      ).body.data.permissions,
+    ).toEqual(permissions);
+    for (const group of masterGroups) {
+      const created = await request(app)
+        .post("/api/masters")
+        .set(member.auth)
+        .send({ ...draft, category: group.id, value: group.values[0] });
+      expect(created.status).toBe(201);
+      expect(
+        (
+          await request(app)
+            .put(`/api/masters/${created.body.data.id}`)
+            .set(member.auth)
+            .send({
+              ...created.body.data,
+              label: "Updated by user",
+              active: false,
+            })
+        ).status,
+      ).toBe(200);
+    }
+    expect(
+      (await request(app).get("/api/admin/users").set(member.auth)).status,
+    ).toBe(403);
+    await store.setPermissions(member.user.id, ["master:social"]);
+    const contact = (await store.listMasters()).find(
+      (m) => m.category === "contact",
+    )!;
+    expect(
+      (
+        await request(app)
+          .put(`/api/masters/${contact.id}`)
+          .set(member.auth)
+          .send({ ...contact, label: "Denied" })
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await request(app)
+          .put(`/api/masters/${contact.id}`)
+          .set(member.auth)
+          .send({ ...draft, label: "Spoofed category" })
+      ).status,
+    ).toBe(422);
+    await store.setPermissions(member.user.id, []);
+    expect(
+      (await request(app).post("/api/masters").set(member.auth).send(draft))
+        .status,
+    ).toBe(403);
+  });
   it("persists permissions and enforces revocation using an existing session", async () => {
     const admin = await account("admin", "owner"),
       member = await account("user", "member");
@@ -25,11 +100,11 @@ describe("menu permissions and account management", () => {
       .set(admin.auth)
       .send({ permissions: ["dashboard", "users", "master:social"] });
     expect(save.status).toBe(200);
-    expect(save.body.data.permissions).toEqual(["dashboard"]);
+    expect(save.body.data.permissions).toEqual(["dashboard", "master:social"]);
     expect(
       (await request(app).get("/api/auth/me").set(member.auth)).body.data.user
         .permissions,
-    ).toEqual(["dashboard"]);
+    ).toEqual(["dashboard", "master:social"]);
     for (const path of [
       "/api/CARDS",
       "/api/cards",

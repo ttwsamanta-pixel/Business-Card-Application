@@ -19,6 +19,6 @@ export function effectivePermissions(role: Role, permissions?: string[]) {
   return (permissions ?? defaultPermissions(role)).filter(
     (key) =>
       menuKeys.includes(key) &&
-      (role === "admin" || (key !== "users" && !key.startsWith("master:"))),
+      (role === "admin" || key !== "users"),
   );
 }

@@ -10,7 +10,7 @@ export const menus = [
     key: `master:${id}`,
     label,
     href: `/master/${id}`,
-    admin: true,
+    admin: false,
   })),
 ];
 export type SessionUser = {
