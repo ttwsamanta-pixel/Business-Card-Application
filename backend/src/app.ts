@@ -12,6 +12,7 @@ import { publicRouter } from "./routes/public.routes.js";
 import { adminRouter } from "./routes/admin.routes.js";
 import { uploadRouter } from "./routes/upload.routes.js";
 import { masterRouter } from './routes/master.routes.js';
+import { designRouter } from './routes/design.routes.js';
 import { fail } from "./utils/http.js";
 
 export const app = express();
@@ -37,11 +38,12 @@ app.use("/api/public", publicRouter);
 app.use("/api/uploads", uploadRouter);
 app.use("/api/admin", adminRouter);
 app.use('/api/masters',masterRouter);
+app.use('/api/design',designRouter);
 
 app.use((_req, res) => fail(res, 404, "Route not found"));
 
 app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  if (error && typeof error === 'object' && 'code' in error && error.code === 'LIMIT_FILE_SIZE') return fail(res,422,`Image must be smaller than ${config.MAX_UPLOAD_MB} MB`);
+  if (error && typeof error === 'object' && 'code' in error && error.code === 'LIMIT_FILE_SIZE') return fail(res,422,`Media must be smaller than ${config.MAX_UPLOAD_MB} MB`);
   if (error && typeof error === "object" && "issues" in error) {
     return fail(res, 422, "Validation failed", error);
   }

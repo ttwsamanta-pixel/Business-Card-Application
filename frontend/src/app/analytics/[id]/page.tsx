@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AppNav } from "@/components/AppNav";
+import { LocationHistory } from '@/components/LocationHistory';
 import { endpoints, publicApiAsset, publicCardUrl } from "@/lib/api";
 import type { CardProfile } from "@/lib/templates";
 import { ArrowLeft, CalendarDays, Globe2, Link2, Share2 } from "lucide-react";
@@ -73,14 +74,7 @@ export default function AnalyticsPage() {
           <div className="links-table">{links.map(([url, clicks])=><div key={String(url)}><span><Link2 size={14}/> {url}</span><b>{clicks}</b></div>)}</div>
         </section>
 
-        <section className="analytics-card">
-          <h3>Geo Analysis: <button>IP BASED</button> <button>GPS BASED</button></h3>
-          <p className="geo-note">Location is based on the IP of the scanning devices and may not be always 100% accurate.</p>
-          <div className="world-map">WORLD MAP</div>
-          <div className="geo-columns">
-            {["Countries - Top 10","States (Country) - Top 10","Cities (State) - Top 10"].map((title)=><div key={title}><h4>{title}</h4>{["Japan","India","Indonesia","Vietnam","Afghanistan"].map((item,index)=><p key={item}><span>{item}</span><i><b style={{width:`${65 - index * 11}%`}}/></i><em>{44 - index * 8} ({65 - index * 9}%)</em></p>)}</div>)}
-          </div>
-        </section>
+        <LocationHistory cardId={params.id}/>
       </section>
     </main>
   );

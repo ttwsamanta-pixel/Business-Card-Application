@@ -237,7 +237,7 @@ export function ContentSections({
           if (section.type === "profile") {
             const cover = ["cover", "wave"].includes(template.layout);
             return (
-              <div key={section.id}>
+              <div key={section.id} id={`card-section-${section.id}`}>
                 <div
                   className={
                     cover
@@ -323,6 +323,7 @@ export function ContentSections({
           }
           return (
             <section
+              id={`card-section-${section.id}`}
               key={section.id}
               data-content-type={section.type}
               className={`info-card ${section.type === "social" ? "social-section" : ""} ${section.background ? "" : "transparent-section"}`}

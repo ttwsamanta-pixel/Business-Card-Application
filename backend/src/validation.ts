@@ -93,7 +93,7 @@ export const cardSchema = z.object({
   mapsUrl: url,
   profileImageUrl: url,
   logoUrl: url,
-  theme: z.record(z.string()).optional(),
+  theme: z.record(z.string().max(12000)).refine(v=>Object.keys(v).length<=100,'Too many settings').optional(),
   socialLinks: z.array(socialLinkSchema).max(12).default([]),
 });
 

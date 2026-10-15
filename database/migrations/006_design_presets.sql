@@ -1,0 +1,17 @@
+CREATE TABLE IF NOT EXISTS design_presets (
+ id VARCHAR(36) PRIMARY KEY,
+ user_id VARCHAR(36) NOT NULL,
+ name VARCHAR(120) NOT NULL,
+ kind VARCHAR(10) NOT NULL,
+ settings JSON NOT NULL,
+ INDEX (user_id)
+);
+CREATE TABLE IF NOT EXISTS card_visits (
+ id VARCHAR(36) PRIMARY KEY,
+ card_id VARCHAR(36) NOT NULL,
+ latitude DOUBLE NULL,
+ longitude DOUBLE NULL,
+ accuracy DOUBLE NULL,
+ created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ INDEX (card_id)
+);

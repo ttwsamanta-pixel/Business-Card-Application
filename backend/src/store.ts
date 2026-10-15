@@ -7,6 +7,11 @@ import { uniqueSlug } from "./utils/slug.js";
 import { defaultMasters, type MasterItem } from './masters.js';
 
 export interface Store {
+  listPresets(userId:string):Promise<DesignPreset[]>;
+  savePreset(userId:string,preset:DesignPreset):Promise<void>;
+  deletePreset(userId:string,id:string):Promise<void>;
+  addVisit(cardId:string,location?:{latitude:number;longitude:number;accuracy:number}):Promise<void>;
+  listVisits(cardId:string):Promise<unknown[]>;
   listMasters(): Promise<MasterItem[]>;
   saveMaster(item:MasterItem): Promise<void>;
   addLead(cardId: string, sectionId: string, answers: Record<string,string>): Promise<void>;
@@ -45,7 +50,15 @@ function sqlValues(values: unknown[]) {
   return values.map((value) => value === undefined ? null : value) as any[];
 }
 
+export type DesignPreset={id:string;name:string;kind:string;settings:Record<string,string>};
 export class MemoryStore implements Store {
+  private presets=new Map<string,DesignPreset[]>();
+  private visits:{cardId:string;createdAt:string;latitude?:number;longitude?:number;accuracy?:number}[]=[];
+  async listPresets(userId:string){return this.presets.get(userId)||[];}
+  async savePreset(userId:string,preset:DesignPreset){this.presets.set(userId,[...(this.presets.get(userId)||[]).filter(p=>p.id!==preset.id),preset]);}
+  async deletePreset(userId:string,id:string){this.presets.set(userId,(this.presets.get(userId)||[]).filter(p=>p.id!==id));}
+  async addVisit(cardId:string,location?:{latitude:number;longitude:number;accuracy:number}){this.visits.push({cardId,createdAt:new Date().toISOString(),...location});}
+  async listVisits(cardId:string):Promise<unknown[]>{return this.visits.filter(v=>v.cardId===cardId);}
   private masters = new Map(defaultMasters.map(item=>[item.id,{...item}]));
   async listMasters() {return [...this.masters.values()].sort((a,b)=>a.sortOrder-b.sortOrder || a.label.localeCompare(b.label));}
   async saveMaster(item:MasterItem) {this.masters.set(item.id,{...item});}
@@ -215,6 +228,11 @@ export class MemoryStore implements Store {
 }
 
 export class MySqlStore extends MemoryStore {
+  async listPresets(userId:string):Promise<DesignPreset[]>{const [rows]=await this.pool.execute<mysql.RowDataPacket[]>('SELECT id,name,kind,settings FROM design_presets WHERE user_id=?',[userId]);return rows.map(r=>({id:r.id,name:r.name,kind:r.kind,settings:typeof r.settings==='string'?JSON.parse(r.settings):r.settings}));}
+  async savePreset(userId:string,p:DesignPreset){await this.pool.execute('INSERT INTO design_presets (id,user_id,name,kind,settings) VALUES (?,?,?,?,?)',[p.id,userId,p.name,p.kind,JSON.stringify(p.settings)]);}
+  async deletePreset(userId:string,id:string){await this.pool.execute('DELETE FROM design_presets WHERE id=? AND user_id=?',[id,userId]);}
+  async addVisit(cardId:string,l?:{latitude:number;longitude:number;accuracy:number}){await this.pool.execute('INSERT INTO card_visits (id,card_id,latitude,longitude,accuracy) VALUES (?,?,?,?,?)',[randomUUID(),cardId,l?.latitude??null,l?.longitude??null,l?.accuracy??null]);}
+  async listVisits(cardId:string){const [rows]=await this.pool.execute<mysql.RowDataPacket[]>('SELECT latitude,longitude,accuracy,created_at AS createdAt FROM card_visits WHERE card_id=? ORDER BY created_at DESC LIMIT 1000',[cardId]);return rows;}
   async listMasters():Promise<MasterItem[]> {
     const [rows]=await this.pool.query<mysql.RowDataPacket[]>('SELECT * FROM master_options ORDER BY sort_order,label');
     return rows.map(row=>({id:row.id,category:row.category,value:row.value,label:row.label,subtitle:row.subtitle,iconKey:row.icon_key,iconUrl:row.icon_url,active:Boolean(row.active),sortOrder:row.sort_order}));

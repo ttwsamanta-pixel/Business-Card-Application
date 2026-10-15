@@ -11,7 +11,9 @@ import {
   Plus,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
+import { CardDesign } from './CardDesign';
+import { safeColor } from '@/lib/design';
 import type { CardProfile } from "@/lib/templates";
 import { templateFor } from "@/lib/templates";
 import { publicApiAsset, publicCardUrl } from "@/lib/api";
@@ -33,6 +35,7 @@ export function CardRenderer({
   publicMode?: boolean;
 }) {
   const template = templateFor(card.templateId);
+  const scope=`card-design-${useId().replace(/[^a-zA-Z0-9_-]/g,'')}`;
   const [dialog, setDialog] = useState<"contact" | "qr" | null>(null);
   const [notice, setNotice] = useState("");
   const lead = card.content?.find((section) => section.enabled && section.type === "lead");
@@ -57,7 +60,7 @@ export function CardRenderer({
       setDialog("contact");
     } else downloadContact();
   };
-  const accent = card.theme?.accent || template.accent;
+  const accent = safeColor(card.theme?.accent,template.accent);
   const avatar =
     card.profileImageUrl ||
     "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=500&q=85";
@@ -86,11 +89,11 @@ export function CardRenderer({
 
   return (
     <article
-      className={`business-card ${publicMode ? "public-business-card" : ""} ${compact ? "compact" : ""} theme-${template.bg} layout-${template.layout}`}
+      className={`business-card ${scope} ${publicMode ? "public-business-card" : ""} ${compact ? "compact" : ""} theme-${template.bg} layout-${template.layout}`}
       style={
         {
           "--accent": accent,
-          "--card-radius": `${card.theme?.radius || 12}px`,
+          "--card-radius": `${card.theme?.radius ?? 12}px`,
           fontFamily: card.theme?.font,
         } as React.CSSProperties
       }
@@ -103,6 +106,7 @@ export function CardRenderer({
             : undefined
         }
       />
+      <CardDesign card={card} scope={scope} publicMode={publicMode}/>
       <div className="card-inner">
         {card.content ? (
           <ContentSections
@@ -206,7 +210,7 @@ export function CardRenderer({
             ) : null}
           </>
         )}
-        {!publicMode && card.status === "published" && card.slug ? (
+        {!publicMode && card.theme?.pageQr!=='false' && card.status === "published" && card.slug ? (
           <section className="qr-card">
             <div>
               <h4>
@@ -220,12 +224,12 @@ export function CardRenderer({
 
         {publicMode && card.slug ? (
           <nav className="public-card-footer" aria-label="Card actions">
-            <button className="footer-icon" onClick={() => setDialog("qr")} aria-label="Show QR code" title="Show QR code">
+            {card.theme?.pageQr!=='false'?<button className="footer-icon" onClick={() => setDialog("qr")} aria-label="Show QR code" title="Show QR code">
               <QrCode size={24} />
-            </button>
-            <button className="footer-icon" onClick={share} aria-label="Share card" title="Share card">
+            </button>:null}
+            {card.theme?.pageSharing!=='false'?<button className="footer-icon" onClick={share} aria-label="Share card" title="Share card">
               <Share2 size={24} />
-            </button>
+            </button>:null}
             <button className="footer-contact" onClick={addContact}>
               <span>{String(contact?.values.button || "Add to Contact")}</span><Plus size={28} />
             </button>

@@ -109,7 +109,7 @@ export const masterGroups = [
   {
     id: "font",
     label: "Fonts",
-    values: ["Arial", "Georgia", "Verdana", "Tahoma", "Courier New"],
+    values: ["Arial", "Georgia", "Verdana", "Tahoma", "Courier New", "Work Sans", "Open Sans", "Roboto", "Playfair Display", "Josefin Sans", "Slabo 27px", "Concert One", "Krona One", "Syne", "Federo", "Viaoda Libre", "Handlee", "Poppins", "Montserrat", "Lato", "Spectral", "Manrope", "Mukta", "Marcellus", "Mulish", "DM Serif Text", "DM Sans", "Be Vietnam Pro", "DM Serif Display"],
   },
 ];
 const social = [

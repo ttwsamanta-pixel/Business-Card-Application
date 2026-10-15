@@ -8,6 +8,7 @@ import { uniqueSlug } from "../utils/slug.js";
 import { qrPngDataUrl, qrSvg } from "../utils/qr.js";
 import { toVCard } from "../utils/vcard.js";
 import { applyMasterDefaults } from '../masters.js';
+import { prepareTheme, safeCard } from '../utils/card-access.js';
 
 export const cardRouter = Router();
 
@@ -24,6 +25,7 @@ cardRouter.post("/", async (req, res) => {
         .join("; "),
     );
   const body = parsed.data;
+  if(body.theme)try{body.theme=await prepareTheme(body.theme);}catch(e){return fail(res,422,(e as Error).message);}
   if(body.content)body.content=applyMasterDefaults(body.content,await store.listMasters());
   if (!templateById(body.templateId))
     return fail(res, 422, "Selected template is not available");
@@ -31,17 +33,17 @@ cardRouter.post("/", async (req, res) => {
     ...body,
     slug: body.slug || uniqueSlug(body.fullName),
   });
-  return ok(res, card, 201);
+  return ok(res, safeCard(card), 201);
 });
 
 cardRouter.get("/", async (req, res) =>
-  ok(res, await store.listCards(req.user!.id)),
+  ok(res, (await store.listCards(req.user!.id)).map(safeCard)),
 );
 
 cardRouter.get("/:id", async (req, res) => {
   const card = await store.getCardForUser(req.user!.id, req.params.id);
   if (!card) return fail(res, 404, "Card not found");
-  return ok(res, card);
+  return ok(res, safeCard(card));
 });
 
 cardRouter.get("/:id/leads", async (req, res) => {
@@ -49,6 +51,7 @@ cardRouter.get("/:id/leads", async (req, res) => {
   if (!card) return fail(res, 404, "Card not found");
   return ok(res, await store.listLeads(card.id));
 });
+cardRouter.get('/:id/visits',async(req,res,next)=>{try{const card=await store.getCardForUser(req.user!.id,req.params.id);if(!card)return fail(res,404,'Card not found');return ok(res,await store.listVisits(card.id));}catch(e){next(e);}});
 
 cardRouter.put("/:id", async (req, res) => {
   const parsed = cardPatchSchema.safeParse(req.body);
@@ -61,18 +64,21 @@ cardRouter.put("/:id", async (req, res) => {
         .join("; "),
     );
   const body = parsed.data;
+  const previous=await store.getCardForUser(req.user!.id,req.params.id);
+  if(!previous)return fail(res,404,'Card not found');
+  if(body.theme)try{body.theme=await prepareTheme(body.theme,previous.theme);}catch(e){return fail(res,422,(e as Error).message);}
   if(body.content)body.content=applyMasterDefaults(body.content,await store.listMasters());
   if (body.templateId && !templateById(body.templateId))
     return fail(res, 422, "Selected template is not available");
   const card = await store.updateCard(req.user!.id, req.params.id, body);
   if (!card) return fail(res, 404, "Card not found");
-  return ok(res, card);
+  return ok(res, safeCard(card));
 });
 
 cardRouter.post("/:id/duplicate", async (req, res) => {
   const card = await store.duplicateCard(req.user!.id, req.params.id);
   if (!card) return fail(res, 404, "Card not found");
-  return ok(res, card, 201);
+  return ok(res, safeCard(card), 201);
 });
 
 cardRouter.post("/:id/publish", async (req, res) => {
@@ -87,7 +93,7 @@ cardRouter.post("/:id/publish", async (req, res) => {
   const card = await store.updateCard(req.user!.id, req.params.id, {
     status: "published",
   });
-  return ok(res, card);
+  return ok(res, card ? safeCard(card) : card);
 });
 
 cardRouter.post("/:id/unpublish", async (req, res) => {
@@ -96,7 +102,7 @@ cardRouter.post("/:id/unpublish", async (req, res) => {
     publishedAt: undefined,
   });
   if (!card) return fail(res, 404, "Card not found");
-  return ok(res, card);
+  return ok(res, safeCard(card));
 });
 
 cardRouter.delete("/:id", async (req, res) => {
@@ -111,6 +117,7 @@ cardRouter.get("/:id/qr.png", async (req, res) => {
     return fail(res, 404, "Published card not found");
   const dataUrl = await qrPngDataUrl(
     `${process.env.APP_URL || "http://localhost:3000"}/card/${card.slug}`,
+    card.theme,
   );
   const data = Buffer.from(dataUrl.split(",")[1], "base64");
   res.type("png").send(data);
@@ -125,6 +132,7 @@ cardRouter.get("/:id/qr.svg", async (req, res) => {
     .send(
       await qrSvg(
         `${process.env.APP_URL || "http://localhost:3000"}/card/${card.slug}`,
+        card.theme,
       ),
     );
 });

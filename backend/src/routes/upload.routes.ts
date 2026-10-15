@@ -13,7 +13,7 @@ fs.mkdirSync(uploadRoot, { recursive: true });
 const storage = multer.diskStorage({
   destination: (_req, _file, callback) => callback(null, uploadRoot),
   filename: (_req, file, callback) => {
-    const ext = ({'image/jpeg':'.jpg','image/png':'.png','image/webp':'.webp','image/gif':'.gif'} as Record<string,string>)[file.mimetype] || '.bin';
+    const ext = ({'image/jpeg':'.jpg','image/png':'.png','image/webp':'.webp','image/gif':'.gif','video/mp4':'.mp4','video/webm':'.webm'} as Record<string,string>)[file.mimetype] || '.bin';
     callback(null, `${randomUUID()}${ext}`);
   }
 });
@@ -22,7 +22,7 @@ const upload = multer({
   storage,
   limits: { fileSize: config.MAX_UPLOAD_MB * 1024 * 1024 },
   fileFilter: (_req, file, callback) => {
-    const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif", "video/mp4", "video/webm"];
     callback(null, allowed.includes(file.mimetype));
   }
 });
@@ -30,7 +30,7 @@ const upload = multer({
 export const uploadRouter = Router();
 
 uploadRouter.post("/", authenticate, upload.single("file"), (req, res) => {
-  if (!req.file) return fail(res, 422, "A valid image file is required");
+  if (!req.file) return fail(res, 422, "A valid image or MP4/WebM video file is required");
   const publicUrl = new URL(`/api/uploads/files/${req.file.filename}`, config.API_URL).href;
   return ok(res, {
     originalName: req.file.originalname,

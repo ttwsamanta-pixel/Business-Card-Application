@@ -11,8 +11,10 @@ import {
 import { AppNav } from "@/components/AppNav";
 import { CardRenderer } from "@/components/CardRenderer";
 import { ContentEditor } from "@/components/ContentEditor";
-import { MasterProvider, useMasters } from "@/lib/masters";
-import { endpoints, publicApiAsset, publicCardUrl } from "@/lib/api";
+import { DesignEditor } from '@/components/DesignEditor';
+import { QrEditor, QrPreview } from '@/components/QrEditor';
+import { MasterProvider } from "@/lib/masters";
+import { endpoints, publicCardUrl } from "@/lib/api";
 import { initialContent } from "@/lib/card-content";
 import { emptyCard, templates, type CardProfile } from "@/lib/templates";
 
@@ -24,7 +26,6 @@ export default function EditorPage() {
   );
 }
 function Editor() {
-  const { items: masterItems } = useMasters();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [card, setCard] = useState<CardProfile>(emptyCard);
@@ -85,14 +86,13 @@ function Editor() {
       setCard(result);
       setMessage(publish ? "Card published." : "Draft saved.");
       if (params.id === "new") router.replace(`/editor/${saved.id}`);
+      return result;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Save failed");
     } finally {
       setSaving(false);
     }
   };
-  const setTheme = (key: string, value: string) =>
-    change({ theme: { ...card.theme, [key]: value } });
   const url = card.slug ? publicCardUrl(card.slug) : "";
   return (
     <main className="dashboard-layout maker-dashboard">
@@ -203,87 +203,8 @@ function Editor() {
                     <ContentEditor card={card} change={change} onBusy={busy} />
                   </>
                 ) : null}
-                {step === 2 ? (
-                  <div className="ref-body">
-                    <label className="field">
-                      Background color
-                      <input
-                        aria-label="Background color"
-                        type="color"
-                        value={card.theme?.background || "#ffffff"}
-                        onChange={(e) => setTheme("background", e.target.value)}
-                      />
-                    </label>
-                    <label className="field">
-                      Accent color
-                      <input
-                        type="color"
-                        value={card.theme?.accent || "#4f7cff"}
-                        onChange={(e) => setTheme("accent", e.target.value)}
-                      />
-                    </label>
-                    <label className="field">
-                      Font
-                      <select
-                        className="select"
-                        value={card.theme?.font || "Arial"}
-                        onChange={(e) => setTheme("font", e.target.value)}
-                      >
-                        {masterItems
-                          .filter(
-                            (item) =>
-                              item.category === "font" &&
-                              (item.active ||
-                                item.value === (card.theme?.font || "Arial")),
-                          )
-                          .map((item) => (
-                            <option key={item.id} value={item.value}>
-                              {item.label}
-                            </option>
-                          ))}
-                      </select>
-                    </label>
-                    <label className="field">
-                      Card corners
-                      <input
-                        type="range"
-                        min="0"
-                        max="32"
-                        value={card.theme?.radius || "12"}
-                        onChange={(e) => setTheme("radius", e.target.value)}
-                      />
-                    </label>
-                  </div>
-                ) : null}
-                {step === 3 ? (
-                  <div className="ref-body">
-                    <h3>QR Code</h3>
-                    {card.status === "published" && card.slug ? (
-                      <>
-                        <img
-                          width="220"
-                          height="220"
-                          src={publicApiAsset(
-                            `/api/public/cards/${card.slug}/qr.png`,
-                          )}
-                          alt="Card QR code"
-                        />
-                        <a
-                          className="btn secondary"
-                          href={publicApiAsset(
-                            `/api/public/cards/${card.slug}/qr.png`,
-                          )}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          Download QR Code
-                        </a>
-                      </>
-                    ) : (
-                      <p>Publish your card to generate its QR code.</p>
-                    )}
-                  </div>
-                ) : null}
+                {step===2?<DesignEditor theme={card.theme||{}} change={patch=>change({theme:{...card.theme,...patch}})} onBusy={busy}/>:null}
+                {step===3?<QrEditor card={card} change={patch=>change({theme:{...card.theme,...patch}})} onBusy={busy} onSave={()=>save()}/>:null}
               </fieldset>
               <div className="maker-footer">
                 <button
@@ -349,7 +270,7 @@ function Editor() {
                   {uploads ? "Uploading..." : saving ? "Saving..." : "Save"}
                 </button>
               </div>
-              <CardRenderer card={card} />
+              {step===3?<QrPreview card={card}/>:<CardRenderer card={card} />}
             </aside>
           </div>
         )}

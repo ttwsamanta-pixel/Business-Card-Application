@@ -3,6 +3,7 @@ import "./globals.css";
 import './editor-controls.css';
 import './masters.css';
 import './public-card.css';
+import './design-editor.css';
 
 export const metadata: Metadata = {
   title: "CardStudio - Digital Business Card SaaS",
