@@ -8,11 +8,15 @@ import {
   Share2,
   Download,
   Globe,
+  Plus,
+  X,
 } from "lucide-react";
+import { useState } from "react";
 import type { CardProfile } from "@/lib/templates";
 import { templateFor } from "@/lib/templates";
 import { publicApiAsset, publicCardUrl } from "@/lib/api";
-import { ContentSections } from "./ContentSections";
+import { ContentSections, LeadForm } from "./ContentSections";
+import { PublicCardDialog } from "./PublicCardDialog";
 
 function cleanUrl(url = "") {
   if (!url) return "";
@@ -29,6 +33,30 @@ export function CardRenderer({
   publicMode?: boolean;
 }) {
   const template = templateFor(card.templateId);
+  const [dialog, setDialog] = useState<"contact" | "qr" | null>(null);
+  const [notice, setNotice] = useState("");
+  const lead = card.content?.find((section) => section.enabled && section.type === "lead");
+  const contact = card.content?.find((section) => section.enabled && section.type === "contact");
+  const downloadContact = () => {
+    const link = document.createElement("a");
+    link.href = publicApiAsset(`/api/public/cards/${card.slug}/vcard.vcf`);
+    link.download = `${card.slug}.vcf`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+  const addContact = () => {
+    setNotice("");
+    if (lead) {
+      try {
+        if (lead.values.once && localStorage.getItem(`ttw-form-${card.id}-${lead.id}`)) {
+          downloadContact();
+          return;
+        }
+      } catch {}
+      setDialog("contact");
+    } else downloadContact();
+  };
   const accent = card.theme?.accent || template.accent;
   const avatar =
     card.profileImageUrl ||
@@ -39,18 +67,26 @@ export function CardRenderer({
       ? publicApiAsset(`/api/public/cards/${card.slug}/qr.svg`)
       : "";
   const share = async () => {
-    if (navigator.share)
+    try {
+      if (navigator.share)
       await navigator.share({
         title: card.fullName,
         text: card.company || "Digital business card",
         url: publicUrl,
       });
-    else await navigator.clipboard.writeText(publicUrl);
+      else {
+        await navigator.clipboard.writeText(publicUrl);
+        setNotice("Card link copied.");
+      }
+    } catch (error) {
+      if (!(error instanceof Error && error.name === "AbortError"))
+        setNotice("Unable to share. Copy the card address from your browser.");
+    }
   };
 
   return (
     <article
-      className={`business-card ${compact ? "compact" : ""} theme-${template.bg} layout-${template.layout}`}
+      className={`business-card ${publicMode ? "public-business-card" : ""} ${compact ? "compact" : ""} theme-${template.bg} layout-${template.layout}`}
       style={
         {
           "--accent": accent,
@@ -170,7 +206,7 @@ export function CardRenderer({
             ) : null}
           </>
         )}
-        {card.status === "published" && card.slug ? (
+        {!publicMode && card.status === "published" && card.slug ? (
           <section className="qr-card">
             <div>
               <h4>
@@ -183,17 +219,34 @@ export function CardRenderer({
         ) : null}
 
         {publicMode && card.slug ? (
-          <div className="public-actions">
-            <button onClick={share}>
-              <Share2 size={14} /> Share
+          <nav className="public-card-footer" aria-label="Card actions">
+            <button className="footer-icon" onClick={() => setDialog("qr")} aria-label="Show QR code" title="Show QR code">
+              <QrCode size={24} />
             </button>
-            <a
-              href={publicApiAsset(`/api/public/cards/${card.slug}/vcard.vcf`)}
-            >
-              <Download size={14} /> vCard
-            </a>
-          </div>
+            <button className="footer-icon" onClick={share} aria-label="Share card" title="Share card">
+              <Share2 size={24} />
+            </button>
+            <button className="footer-contact" onClick={addContact}>
+              <span>{String(contact?.values.button || "Add to Contact")}</span><Plus size={28} />
+            </button>
+          </nav>
         ) : null}
+        {publicMode && notice ? <div className="public-card-notice" role="status">{notice}</div> : null}
+        {publicMode && dialog === "qr" ? <PublicCardDialog label="Card QR code" onClose={() => setDialog(null)}>
+          <button className="dialog-close" onClick={() => setDialog(null)} aria-label="Close QR code" title="Close"><X /></button>
+          <h2>{card.fullName}</h2>
+          <img className="public-qr-image" src={qrSrc} alt={`QR for ${card.fullName}`} />
+          <a className="btn" href={publicApiAsset(`/api/public/cards/${card.slug}/qr.png`)} download={`${card.slug}.png`}><Download size={18} /> Download QR</a>
+        </PublicCardDialog> : null}
+        {publicMode && dialog === "contact" && lead ? <PublicCardDialog label="Share your contact details" className="contact-exchange-dialog" onClose={() => setDialog(null)}>
+          <div className="exchange-topbar"><button onClick={() => { setDialog(null); downloadContact(); }}>Skip</button></div>
+          {!lead.values.showTitle ? <h2>Share your information with {card.fullName}</h2> : null}
+          <LeadForm section={lead} card={card} publicMode contactExchange onSubmitted={() => {
+            setDialog(null);
+            setNotice(String(lead.values.message || "Thank you for your response."));
+            downloadContact();
+          }} />
+        </PublicCardDialog> : null}
       </div>
     </article>
   );

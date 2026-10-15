@@ -1,0 +1,53 @@
+.public-page:has(.public-business-card) { align-items: start; }
+.public-business-card { min-height: calc(100dvh - 56px); }
+.public-business-card .card-inner { padding-bottom: 110px; }
+.public-card-footer {
+  position: fixed;
+  z-index: 30;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(390px, 100%);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: #ffffffed;
+  border-top: 1px solid #e6e6e6;
+  border-radius: 0 0 24px 24px;
+}
+.public-card-footer button {
+  background: var(--accent);
+  color: white;
+  border: 0;
+  box-shadow: 0 3px 12px #0002;
+}
+.footer-icon { width: 52px; height: 52px; border-radius: 50%; flex: none; display: grid; place-items: center; }
+.footer-contact { margin-left: auto; min-height: 52px; max-width: 230px; border-radius: 28px; padding: 8px 10px 8px 18px; display: flex; align-items: center; gap: 12px; }
+.footer-contact span { min-width: 0; overflow-wrap: anywhere; font-size: 15px; line-height: 1.2; }
+.footer-contact svg { flex: none; background: white; color: var(--accent); border-radius: 50%; padding: 6px; width: 38px; height: 38px; }
+.public-card-dialog { border: 0; border-radius: 8px; padding: 24px; width: min(520px, calc(100% - 32px)); max-height: 90dvh; overflow: auto; background: white; color: #172033; }
+.public-card-dialog::backdrop { background: #0008; }
+.public-card-dialog h2 { font-size: 26px; line-height: 1.25; overflow-wrap: anywhere; margin: 20px 0 28px; }
+.dialog-close { float: right; background: transparent; border: 0; padding: 8px; }
+.public-qr-image { width: min(280px, 100%); aspect-ratio: 1; display: block; margin: 24px auto; }
+.exchange-topbar { display: flex; justify-content: flex-end; position: sticky; top: -24px; background: white; padding: 12px 0; z-index: 1; }
+.exchange-topbar button { border: 0; background: white; color: #59616a; font-size: 18px; padding: 8px; }
+.contact-exchange-dialog .lead-public-form { gap: 24px; }
+.contact-exchange-dialog .field { font-size: 16px; font-weight: 400; }
+.contact-exchange-dialog input, .contact-exchange-dialog textarea { font-size: 16px; min-height: 48px; border: 1px solid #cbd0d7; border-radius: 4px; }
+.contact-exchange-dialog input[type=checkbox] { min-height: auto; }
+.contact-exchange-dialog .lead-public-form > label:not(.field) { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.contact-exchange-dialog h4 { font-size: 26px; line-height: 1.25; margin: 8px 0; color: #172033; }
+.contact-exchange-dialog .lead-public-form > .btn { background: var(--accent); border-radius: 4px; min-height: 52px; position: sticky; bottom: 0; font-size: 16px; }
+.public-card-notice { position: fixed; z-index: 40; bottom: calc(94px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); width: min(360px, calc(100% - 32px)); background: #172033; color: white; padding: 12px; border-radius: 6px; font-size: 14px; }
+@media (max-width: 600px) {
+  .public-page { padding: 0; display: block; background: white; min-height: 100dvh; }
+  .public-wrap { width: 100%; }
+  .public-wrap .public-business-card { width: 100%; min-height: 100dvh; border: 0; border-radius: 0; box-shadow: none; }
+  .public-card-footer { width: 100%; bottom: 0; border-radius: 0; }
+  .public-business-card .cover-hero { border-radius: 0; }
+  .public-business-card .profile-hero h3, .public-business-card .cover-copy h3, .public-business-card .split-copy h3 { font-size: 28px; overflow-wrap: anywhere; }
+  .public-card-dialog.contact-exchange-dialog { width: 100%; height: 100dvh; max-width: none; max-height: 100dvh; margin: 0; border-radius: 0; padding: 20px 22px calc(20px + env(safe-area-inset-bottom)); }
+  .contact-exchange-dialog .exchange-topbar { top: -20px; }
+}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import './editor-controls.css';
 import './masters.css';
+import './public-card.css';
 
 export const metadata: Metadata = {
   title: "CardStudio - Digital Business Card SaaS",

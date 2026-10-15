@@ -1,20 +1,23 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Download, Globe, Mail, Phone } from "lucide-react";
 import { ChevronRight } from "lucide-react";
 import { MasterIcon } from "./MasterIcon";
-import { api, publicApiAsset } from "@/lib/api";
+import { api } from "@/lib/api";
 import { safeLink, type ContentSection } from "@/lib/card-content";
 import { templateFor, type CardProfile } from "@/lib/templates";
 
-function LeadForm({
+export function LeadForm({
   section,
   card,
   publicMode,
+  contactExchange = false,
+  onSubmitted,
 }: {
   section: ContentSection;
   card: CardProfile;
   publicMode: boolean;
+  contactExchange?: boolean;
+  onSubmitted?: () => void;
 }) {
   const v = section.values;
   const [open, setOpen] = useState(false);
@@ -23,7 +26,7 @@ function LeadForm({
   const [busy, setBusy] = useState(false);
   const storageKey = `ttw-form-${card.id}-${section.id}`;
   useEffect(() => {
-    if (!publicMode || v.mode !== "Overlay") return;
+    if (contactExchange || !publicMode || v.mode !== "Overlay") return;
     try {
       if (v.once && localStorage.getItem(storageKey)) return;
     } catch {}
@@ -39,7 +42,7 @@ function LeadForm({
       window.addEventListener("scroll", show, { once: true });
       return () => window.removeEventListener("scroll", show);
     }
-  }, [publicMode, v.mode, v.once, v.trigger, v.delay, storageKey]);
+  }, [contactExchange, publicMode, v.mode, v.once, v.trigger, v.delay, storageKey]);
   const content = (
     <form
       className="lead-public-form"
@@ -67,6 +70,7 @@ function LeadForm({
           try {
             localStorage.setItem(storageKey, "submitted");
           } catch {}
+          onSubmitted?.();
         } catch (err) {
           setError(err instanceof Error ? err.message : "Submission failed");
         } finally {
@@ -85,7 +89,7 @@ function LeadForm({
       ) : null}
       {section.items.map((field) => (
         <label className="field" key={field.id}>
-          {String(field.values.label || "")}
+          <span>{String(field.values.label || "")}{field.values.required ? " *" : ""}</span>
           {field.values.type === "Multi-Line" ? (
             <textarea
               className="textarea"
@@ -146,6 +150,7 @@ function LeadForm({
       </button>
     </form>
   );
+  if (contactExchange) return content;
   const completion = (
     <div role="status">
       <p>{String(v.message || "Thank you for your response.")}</p>
@@ -415,17 +420,7 @@ export function ContentSections({
                       </div>
                     );
                   })}
-                  {v.floating && card.slug && publicMode ? (
-                    <a
-                      className="btn card-contact-button"
-                      href={publicApiAsset(
-                        `/api/public/cards/${card.slug}/vcard.vcf`,
-                      )}
-                    >
-                      <Download size={15} />
-                      {String(v.button || "Add to Contact")}
-                    </a>
-                  ) : v.floating && !compact ? (
+                  {v.floating && !publicMode && !compact ? (
                     <span className="btn">
                       {String(v.button || "Add to Contact")}
                     </span>
