@@ -16,6 +16,10 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  ScanLine,
+  CalendarDays,
+  ContactRound,
+  FileText,
 } from "lucide-react";
 import { AppNav } from "./AppNav";
 import { OwnerQr } from "./OwnerQr";
@@ -146,20 +150,24 @@ export function CardList({ overview = false }: { overview?: boolean }) {
           <>
             <div className="overview-cards">
               <div className="overview-card blue">
+                <ScanLine className="report-icon" size={20} aria-hidden="true" />
                 <span>Total Scans</span>
                 <strong>{data.total}</strong>
               </div>
               <div className="overview-card green">
+                <CalendarDays className="report-icon" size={20} aria-hidden="true" />
                 <span>Current Month Scans</span>
                 <strong>{data.month}</strong>
               </div>
               <div className="overview-card pink">
+                <ContactRound className="report-icon" size={20} aria-hidden="true" />
                 <span>Published Cards</span>
                 <strong>
                   {data.cards.filter((c) => c.status === "published").length}
                 </strong>
               </div>
               <div className="overview-card yellow">
+                <FileText className="report-icon" size={20} aria-hidden="true" />
                 <span>Draft Cards</span>
                 <strong>
                   {data.cards.filter((c) => c.status === "draft").length}
