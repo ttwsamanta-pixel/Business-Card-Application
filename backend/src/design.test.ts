@@ -11,14 +11,47 @@ const decode = jsQR as unknown as (
   height: number,
 ) => { data: string } | null;
 describe("card design and access", () => {
+  it("preserves manual font sizes when saving and publishing cards", async () => {
+    const owner = await request(app).post("/api/auth/register").send({
+      name: "Font Editor",
+      email: "font-editor@example.test",
+      password: "Password123!",
+    });
+    const auth = { Authorization: `Bearer ${owner.body.data.token}` };
+    const created = await request(app).post("/api/cards").set(auth).send({
+      templateId: "signature-classic",
+      fullName: "Readable Card",
+    });
+    expect(created.status).toBe(201);
+    const card = created.body.data;
+    const theme = {
+      nameFontSize: "32",
+      profileFontSize: "17",
+      headingFontSize: "23",
+      bodyFontSize: "18",
+    };
+    const saved = await request(app)
+      .put(`/api/cards/${card.id}`)
+      .set(auth)
+      .send({ theme });
+    expect(saved.status).toBe(200);
+    expect(saved.body.data.theme).toMatchObject(theme);
+    expect(
+      (await request(app).get(`/api/cards/${card.id}`).set(auth)).body.data
+        .theme,
+    ).toMatchObject(theme);
+    await request(app).post(`/api/cards/${card.id}/publish`).set(auth);
+    expect(
+      (await request(app).get(`/api/public/cards/${card.slug}`)).body.data
+        .theme,
+    ).toMatchObject(theme);
+  });
   it("enforces passcodes on content, contact downloads and leads and invalidates old access", async () => {
-    const owner = await request(app)
-      .post("/api/auth/register")
-      .send({
-        name: "Design Owner",
-        email: "design-owner@example.test",
-        password: "Password123!",
-      });
+    const owner = await request(app).post("/api/auth/register").send({
+      name: "Design Owner",
+      email: "design-owner@example.test",
+      password: "Password123!",
+    });
     const auth = { Authorization: `Bearer ${owner.body.data.token}` };
     const created = await request(app)
       .post("/api/cards")
@@ -106,13 +139,11 @@ describe("card design and access", () => {
     expect(invalid.status).toBe(422);
   });
   it("stores private presets, rejects anonymous edits and protects location consent", async () => {
-    const a = await request(app)
-      .post("/api/auth/register")
-      .send({
-        name: "Styles Owner",
-        email: "styles-owner@example.test",
-        password: "Password123!",
-      });
+    const a = await request(app).post("/api/auth/register").send({
+      name: "Styles Owner",
+      email: "styles-owner@example.test",
+      password: "Password123!",
+    });
     const auth = { Authorization: `Bearer ${a.body.data.token}` };
     expect(
       (await request(app).post("/api/design/presets").send({})).status,

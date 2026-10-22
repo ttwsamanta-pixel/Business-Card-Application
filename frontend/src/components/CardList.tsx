@@ -317,7 +317,7 @@ export function CardList({ overview = false }: { overview?: boolean }) {
                   </th>
                   <th>Date</th>
                   <th>Name</th>
-                  <th>Type</th>
+                  <th>Created By</th>
                   <th>Total Scans</th>
                   <th>QR Code</th>
                   <th>Action</th>
@@ -355,7 +355,6 @@ export function CardList({ overview = false }: { overview?: boolean }) {
                       <Link href={`/editor/${card.id}`}>
                         <strong>{card.fullName}</strong> <Edit size={13} />
                       </Link>
-                      {user?.isSuperAdmin&&<small>Owner: {card.ownerName}<br/>{card.ownerEmail}</small>}
                       <small className="card-url">
                         {publicCardUrl(card.slug)}
                       </small>
@@ -366,7 +365,8 @@ export function CardList({ overview = false }: { overview?: boolean }) {
                       </small>
                     </td>
                     <td>
-                      Dynamic<small>Digital Business Card</small>
+                      {card.ownerName || (card.ownedByMe ? user?.name : "Unknown")}
+                      {card.ownerEmail && <small>{card.ownerEmail}</small>}
                     </td>
                     <td>
                       <strong>{card.scans || 0}</strong>

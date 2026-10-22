@@ -1,10 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Check, Trash2, Save, X } from "lucide-react";
+import { Check, Trash2, Save, X, RotateCcw } from "lucide-react";
 import { api } from "@/lib/api";
 import {
   backgrounds,
   palettes,
+  fontSizes,
+  numberSetting,
   type DesignPreset,
   type Theme,
 } from "@/lib/design";
@@ -127,6 +129,38 @@ export function DesignEditor({
         </div>
       </DesignPanel>
       <DesignPanel title="Font Style">
+        <div className="form-grid">
+          {fontSizes.map(({ key, label, defaultValue, min, max }) => (
+            <label className="field" key={key}>
+              {label} (px)
+              <input
+                className="input"
+                type="number"
+                min={min}
+                max={max}
+                step="1"
+                value={theme[key] ?? defaultValue}
+                onChange={(e) => set(key, e.target.value)}
+                onBlur={(e) =>
+                  set(
+                    key,
+                    String(
+                      numberSetting(e.target.value, defaultValue, min, max),
+                    ),
+                  )
+                }
+              />
+            </label>
+          ))}
+        </div>
+        <button
+          className="outline-action"
+          onClick={() =>
+            change(Object.fromEntries(fontSizes.map(({ key }) => [key, ""])))
+          }
+        >
+          <RotateCcw size={16} /> Reset font sizes
+        </button>
         <div className="font-options">
           <button
             className={!theme.font ? "selected" : ""}

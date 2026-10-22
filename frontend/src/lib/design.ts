@@ -1,5 +1,56 @@
 import postcss from "postcss";
 export type Theme = Record<string, string>;
+export const fontSizes = [
+  {
+    key: "nameFontSize",
+    label: "Profile name",
+    defaultValue: 28,
+    min: 18,
+    max: 48,
+    selectors: [".profile-hero h3", ".cover-copy h3", ".split-copy h3"],
+  },
+  {
+    key: "profileFontSize",
+    label: "Designation and company",
+    defaultValue: 14,
+    min: 12,
+    max: 24,
+    selectors: [
+      ".profile-hero p",
+      ".profile-hero strong",
+      ".cover-copy p",
+      ".cover-copy strong",
+      ".split-copy p",
+      ".split-copy strong",
+    ],
+  },
+  {
+    key: "headingFontSize",
+    label: "Section headings",
+    defaultValue: 19,
+    min: 14,
+    max: 32,
+    selectors: [".info-card h4", ".qr-card h4"],
+  },
+  {
+    key: "bodyFontSize",
+    label: "Body and contact text",
+    defaultValue: 14,
+    min: 12,
+    max: 24,
+    selectors: [
+      ".info-card p",
+      ".info-card a",
+      ".contact-master-label",
+      ".link-row",
+      ".link-row span",
+      ".social-link-row",
+      ".social-link-row small",
+      ".link-row small",
+      ".qr-card p",
+    ],
+  },
+] as const;
 export type DesignPreset = {
   id: string;
   name: string;

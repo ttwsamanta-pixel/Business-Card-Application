@@ -9,6 +9,7 @@ import {
   safeMedia,
   scopedCss,
   numberSetting,
+  fontSizes,
 } from "@/lib/design";
 export function CardDesign({
   card,
@@ -50,6 +51,12 @@ export function CardDesign({
   const rule = (selector: string, property: string, value: string) => {
     css += `${selector}{${property}:${value};}`;
   };
+  for (const size of fontSizes) {
+    const selector = size.selectors.map((s) => `${root}:not(.compact) ${s}`).join(",");
+    rule(selector, "font-size", `${numberSetting(t[size.key], size.defaultValue, size.min, size.max)}px`);
+    rule(selector, "overflow-wrap", "anywhere");
+    rule(selector, "line-height", "1.4");
+  }
   if (t.profilePrimary)
     rule(
       `${root} .profile-hero h3,${root} .cover-copy h3,${root} .split-copy h3`,
