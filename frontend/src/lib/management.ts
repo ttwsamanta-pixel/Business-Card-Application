@@ -1,6 +1,7 @@
 import { getToken, publicApiAsset } from "./api";
 import type { CardProfile } from "./templates";
 export type Folder = {
+  userId?: string;
   id: string;
   name: string;
   count: number;

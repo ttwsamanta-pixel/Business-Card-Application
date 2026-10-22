@@ -8,10 +8,18 @@ import { adminCreateUserSchema } from "../validation.js";
 import { ok, fail } from "../utils/http.js";
 import { effectivePermissions, menuKeys } from "../permissions.js";
 import { safeCard } from "../utils/card-access.js";
+import { visibleCards } from '../utils/owner-scope.js';
 
 export const adminRouter = Router();
 
 adminRouter.use(authenticate, requireAdmin);
+adminRouter.use('/users/:id',async(req,res,next)=>{
+  try{
+    if(req.method!=='GET'&&!req.user!.isSuperAdmin&&await store.isSuperAdmin(req.params.id))
+      return fail(res,403,'Only Super Admin can change this account');
+    next();
+  }catch(error){next(error);}
+});
 
 adminRouter.get("/overview", async (_req, res) => {
   const users = await store.listUsers();
@@ -132,8 +140,8 @@ adminRouter.delete("/users/:id", async (req, res) => {
   return ok(res, { deleted: true });
 });
 
-adminRouter.get("/cards", async (_req, res) =>
-  ok(res, (await store.listAllCards()).map(safeCard)),
+adminRouter.get("/cards", async (req, res) =>
+  ok(res, (await visibleCards(req.user!)).map(safeCard)),
 );
 
 adminRouter.get("/templates", async (_req, res) =>

@@ -6,6 +6,7 @@ import { store } from "../store.js";
 import { safeCard } from "../utils/card-access.js";
 import { summarize } from "../utils/analytics.js";
 import { ok, fail } from "../utils/http.js";
+import { accessibleCard, managementScope } from '../utils/owner-scope.js';
 export const managementRouter = Router();
 managementRouter.use(authenticate);
 managementRouter.put("/cards/:id/campaign", async (req, res, next) => {
@@ -21,12 +22,12 @@ managementRouter.put("/cards/:id/campaign", async (req, res, next) => {
     const p = z.object({ start: date, end: date }).safeParse(req.body);
     if (!p.success || (p.data.start && p.data.end && p.data.start > p.data.end))
       return fail(res, 422, "Enter a valid campaign date range");
-    const card = await store.getCardForUser(
-      req.user!.id,
+    const card = await accessibleCard(
+      req.user!,
       String(req.params.id),
     );
     if (!card) return fail(res, 404, "Card not found");
-    const result = await store.updateCard(req.user!.id, card.id, {
+    const result = await store.updateCard(card.userId, card.id, {
       theme: {
         ...card.theme,
         campaignStart: p.data.start,
@@ -40,11 +41,7 @@ managementRouter.put("/cards/:id/campaign", async (req, res, next) => {
 });
 managementRouter.get("/", async (req, res, next) => {
   try {
-    const user = req.user!.id,
-      cards = await store.listCards(user),
-      events = await store.listEvents(user),
-      folders = await store.listFolders(user),
-      members = await store.folderMembers(user);
+    const {cards,events,folders,members,owners}=await managementScope(req.query.scope==='own'?{...req.user!,isSuperAdmin:false}:req.user!);
     const month = new Intl.DateTimeFormat("en-CA", {
       timeZone: "Asia/Kolkata",
       year: "numeric",
@@ -53,6 +50,9 @@ managementRouter.get("/", async (req, res, next) => {
     return ok(res, {
       cards: cards.map((c) => ({
         ...safeCard(c),
+        ownerName: owners.find(u=>u.id===c.userId)?.name || 'Unknown owner',
+        ownerEmail: req.user!.isSuperAdmin ? owners.find(u=>u.id===c.userId)?.email : undefined,
+        ownedByMe: c.userId===req.user!.id,
         folderId: members.find((m) => m.cardId === c.id)?.folderId || "",
         scans: events.filter((e) => e.cardId === c.id && e.kind === "view")
           .length,
@@ -96,15 +96,16 @@ managementRouter.get("/analytics", async (req, res, next) => {
     }
     if (q.from && q.to && q.from > q.to)
       return fail(res, 422, "Start date must precede end date");
-    if (q.cardId && !(await store.getCardForUser(req.user!.id, q.cardId)))
+    const scope=await managementScope(req.user!);
+    if (q.cardId && !scope.cards.some(c=>c.id===q.cardId))
       return fail(res, 404, "Card not found");
     if (
       q.folderId &&
-      !(await store.listFolders(req.user!.id)).some((f) => f.id === q.folderId)
+      !scope.folders.some((f) => f.id === q.folderId)
     )
       return fail(res, 404, "Folder not found");
-    const members = await store.folderMembers(req.user!.id);
-    const events = (await store.listEvents(req.user!.id)).filter(
+    const members = scope.members;
+    const events = scope.events.filter(
       (e) =>
         (!q.cardId || e.cardId === q.cardId) &&
         (!q.folderId ||
@@ -115,7 +116,7 @@ managementRouter.get("/analytics", async (req, res, next) => {
         (!q.to || e.createdAt <= q.to),
     );
     const report = summarize(events, q.tz);
-    const selected = (await store.listCards(req.user!.id)).filter(
+    const selected = scope.cards.filter(
       (c) =>
         (!q.cardId || c.id === q.cardId) &&
         (!q.folderId ||

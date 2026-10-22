@@ -40,6 +40,7 @@ export async function authenticate(
       status: user.status,
       profileImageUrl: user.profileImageUrl,
       permissions,
+      isSuperAdmin: user.role==='admin' && await store.isSuperAdmin(user.id),
     };
     // Express routes are case-insensitive by default; permission checks must match.
     const path = req.originalUrl.split("?")[0].toLowerCase();

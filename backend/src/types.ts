@@ -10,6 +10,7 @@ export type User = {
   status: "active" | "disabled";
   profileImageUrl?: string;
   permissions?: string[];
+  isSuperAdmin?: boolean;
   createdAt: string;
 };
 
@@ -45,7 +46,7 @@ export type BusinessCard = {
   updatedAt: string;
 };
 
-export type PublicUser = Pick<User, "id" | "name" | "email" | "role" | "status" | "profileImageUrl" | "permissions">;
+export type PublicUser = Pick<User, "id" | "name" | "email" | "role" | "status" | "profileImageUrl" | "permissions" | "isSuperAdmin">;
 
 declare global {
   namespace Express {

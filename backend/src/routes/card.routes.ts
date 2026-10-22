@@ -8,10 +8,19 @@ import { qrPngDataUrl, qrSvg } from "../utils/qr.js";
 import { toVCard } from "../utils/vcard.js";
 import { applyMasterDefaults } from '../masters.js';
 import { prepareTheme, safeCard } from '../utils/card-access.js';
+import { accessibleCard, visibleCards } from '../utils/owner-scope.js';
 
 export const cardRouter = Router();
 
 cardRouter.use(authenticate);
+cardRouter.param('id',async(req,res,next,id)=>{
+  try{
+    const card=await accessibleCard(req.user!,id);
+    if(!card)return fail(res,404,'Card not found');
+    res.locals.cardOwnerId=card.userId;
+    next();
+  }catch(error){next(error);}
+});
 
 cardRouter.post("/", async (req, res) => {
   const parsed = cardSchema.safeParse(req.body);
@@ -36,21 +45,21 @@ cardRouter.post("/", async (req, res) => {
 });
 
 cardRouter.get("/", async (req, res) =>
-  ok(res, (await store.listCards(req.user!.id)).map(safeCard)),
+  ok(res, (await visibleCards(req.user!)).map(safeCard)),
 );
 
 cardRouter.get("/:id", async (req, res) => {
-  const card = await store.getCardForUser(req.user!.id, req.params.id);
+  const card = await store.getCardForUser(res.locals.cardOwnerId, req.params.id);
   if (!card) return fail(res, 404, "Card not found");
   return ok(res, safeCard(card));
 });
 
 cardRouter.get("/:id/leads", async (req, res) => {
-  const card = await store.getCardForUser(req.user!.id, req.params.id);
+  const card = await store.getCardForUser(res.locals.cardOwnerId, req.params.id);
   if (!card) return fail(res, 404, "Card not found");
   return ok(res, await store.listLeads(card.id));
 });
-cardRouter.get('/:id/visits',async(req,res,next)=>{try{const card=await store.getCardForUser(req.user!.id,req.params.id);if(!card)return fail(res,404,'Card not found');return ok(res,await store.listVisits(card.id));}catch(e){next(e);}});
+cardRouter.get('/:id/visits',async(req,res,next)=>{try{const card=await store.getCardForUser(res.locals.cardOwnerId,req.params.id);if(!card)return fail(res,404,'Card not found');return ok(res,await store.listVisits(card.id));}catch(e){next(e);}});
 
 cardRouter.put("/:id", async (req, res) => {
   const parsed = cardPatchSchema.safeParse(req.body);
@@ -63,13 +72,13 @@ cardRouter.put("/:id", async (req, res) => {
         .join("; "),
     );
   const body = parsed.data;
-  const previous=await store.getCardForUser(req.user!.id,req.params.id);
+  const previous=await store.getCardForUser(res.locals.cardOwnerId,req.params.id);
   if(!previous)return fail(res,404,'Card not found');
   if(body.theme)try{body.theme=await prepareTheme(body.theme,previous.theme);}catch(e){return fail(res,422,(e as Error).message);}
   if(body.content)body.content=applyMasterDefaults(body.content,await store.listMasters());
   if (body.templateId && body.templateId!==previous.templateId && !(await store.listTemplates()).some(t=>t.id===body.templateId&&t.active))
     return fail(res, 422, "Selected template is not available");
-  const card = await store.updateCard(req.user!.id, req.params.id, body);
+  const card = await store.updateCard(res.locals.cardOwnerId, req.params.id, body);
   if (!card) return fail(res, 404, "Card not found");
   return ok(res, safeCard(card));
 });
@@ -81,7 +90,7 @@ cardRouter.post("/:id/duplicate", async (req, res) => {
 });
 
 cardRouter.post("/:id/publish", async (req, res) => {
-  const existing = await store.getCardForUser(req.user!.id, req.params.id);
+  const existing = await store.getCardForUser(res.locals.cardOwnerId, req.params.id);
   if (!existing) return fail(res, 404, "Card not found");
   if (!existing.fullName || !existing.templateId)
     return fail(
@@ -89,14 +98,14 @@ cardRouter.post("/:id/publish", async (req, res) => {
       422,
       "Full name and template are required before publishing",
     );
-  const card = await store.updateCard(req.user!.id, req.params.id, {
+  const card = await store.updateCard(res.locals.cardOwnerId, req.params.id, {
     status: "published",
   });
   return ok(res, card ? safeCard(card) : card);
 });
 
 cardRouter.post("/:id/unpublish", async (req, res) => {
-  const card = await store.updateCard(req.user!.id, req.params.id, {
+  const card = await store.updateCard(res.locals.cardOwnerId, req.params.id, {
     status: "draft",
     publishedAt: undefined,
   });
@@ -111,7 +120,7 @@ cardRouter.delete("/:id", async (req, res) => {
 });
 
 cardRouter.get("/:id/qr.png", async (req, res) => {
-  const card = await store.getCardForUser(req.user!.id, req.params.id);
+  const card = await store.getCardForUser(res.locals.cardOwnerId, req.params.id);
   if (!card) return fail(res, 404, "Card not found");
   const dataUrl = await qrPngDataUrl(
     `${process.env.APP_URL || "http://localhost:3000"}/card/${card.slug}`,
@@ -122,7 +131,7 @@ cardRouter.get("/:id/qr.png", async (req, res) => {
 });
 
 cardRouter.get("/:id/qr.svg", async (req, res) => {
-  const card = await store.getCardForUser(req.user!.id, req.params.id);
+  const card = await store.getCardForUser(res.locals.cardOwnerId, req.params.id);
   if (!card) return fail(res, 404, "Card not found");
   res
     .type("svg")
@@ -135,7 +144,7 @@ cardRouter.get("/:id/qr.svg", async (req, res) => {
 });
 
 cardRouter.get("/:id/vcard.vcf", async (req, res) => {
-  const card = await store.getCardForUser(req.user!.id, req.params.id);
+  const card = await store.getCardForUser(res.locals.cardOwnerId, req.params.id);
   if (!card) return fail(res, 404, "Card not found");
   res.setHeader(
     "Content-Disposition",

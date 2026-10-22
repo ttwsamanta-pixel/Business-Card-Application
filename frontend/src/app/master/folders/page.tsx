@@ -29,7 +29,7 @@ export default function FoldersPage() {
     [busy, setBusy] = useState(false);
   const [edit, setEdit] = useState<{ id?: string; name: string } | null>(null);
   const load = async () =>
-    setFolders((await api<Management>("/management")).folders);
+    setFolders((await api<Management>("/management?scope=own")).folders);
   useEffect(() => {
     load()
       .catch((e) => setError(e.message))

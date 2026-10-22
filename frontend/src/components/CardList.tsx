@@ -88,7 +88,7 @@ export function CardList({ overview = false }: { overview?: boolean }) {
   const filtered = data.cards
     .filter(
       (c) =>
-        `${c.fullName} ${c.company} ${c.slug}`
+        `${c.fullName} ${c.company} ${c.slug} ${c.ownerName||''} ${c.ownerEmail||''}`
           .toLowerCase()
           .includes(search.toLowerCase()) &&
         (!status || c.status === status) &&
@@ -296,8 +296,8 @@ export function CardList({ overview = false }: { overview?: boolean }) {
                       type="checkbox"
                       aria-label="Select page"
                       checked={
-                        rows.length > 0 &&
-                        rows.every((c) => selected.includes(c.id!))
+                        rows.some(c=>c.ownedByMe!==false) &&
+                        rows.filter(c=>c.ownedByMe!==false).every((c) => selected.includes(c.id!))
                       }
                       onChange={(e) =>
                         setSelected(
@@ -305,7 +305,7 @@ export function CardList({ overview = false }: { overview?: boolean }) {
                             ? Array.from(
                                 new Set([
                                   ...selected,
-                                  ...rows.map((c) => c.id!),
+                                  ...rows.filter(c=>c.ownedByMe!==false).map((c) => c.id!),
                                 ]),
                               )
                             : selected.filter(
@@ -330,6 +330,7 @@ export function CardList({ overview = false }: { overview?: boolean }) {
                       <input
                         type="checkbox"
                         aria-label={`Select ${card.fullName}`}
+                        disabled={card.ownedByMe===false}
                         checked={selected.includes(card.id!)}
                         onChange={(e) =>
                           setSelected(
@@ -354,6 +355,7 @@ export function CardList({ overview = false }: { overview?: boolean }) {
                       <Link href={`/editor/${card.id}`}>
                         <strong>{card.fullName}</strong> <Edit size={13} />
                       </Link>
+                      {user?.isSuperAdmin&&<small>Owner: {card.ownerName}<br/>{card.ownerEmail}</small>}
                       <small className="card-url">
                         {publicCardUrl(card.slug)}
                       </small>
@@ -403,7 +405,7 @@ export function CardList({ overview = false }: { overview?: boolean }) {
                           Edit
                         </Link>
                         <button
-                          disabled={busy}
+                          disabled={busy||card.ownedByMe===false}
                           onClick={() =>
                             act(
                               () => endpoints.duplicateCard(card.id!),
@@ -415,7 +417,7 @@ export function CardList({ overview = false }: { overview?: boolean }) {
                           Duplicate
                         </button>
                         <button
-                          disabled={busy||!canAccess(user,'folders')}
+                          disabled={busy||!canAccess(user,'folders')||card.ownedByMe===false}
                           onClick={() => {
                             setMove([card.id!]);
                             setDestination(card.folderId || "");
@@ -444,7 +446,7 @@ export function CardList({ overview = false }: { overview?: boolean }) {
                           Email Signature
                         </button>
                         <button
-                          disabled={busy}
+                          disabled={busy||card.ownedByMe===false}
                           onClick={() => {
                             if (confirm(`Delete ${card.fullName} permanently?`))
                               void act(
@@ -533,7 +535,7 @@ export function CardList({ overview = false }: { overview?: boolean }) {
                 onChange={(e) => setDestination(e.target.value)}
               >
                 <option value="">Unfiled</option>
-                {data.folders.map((f) => (
+                {data.folders.filter(f=>!f.userId||f.userId===user?.id).map((f) => (
                   <option key={f.id} value={f.id}>
                     {f.name}
                   </option>

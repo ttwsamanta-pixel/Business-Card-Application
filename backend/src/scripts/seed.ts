@@ -28,6 +28,7 @@ await connection.execute(
 );
 
 const userPassword = await bcrypt.hash("User12345!", 12);
+await connection.execute("INSERT IGNORE INTO super_admin_accounts(user_id) SELECT id FROM users WHERE email='admin@example.com' AND role='admin' AND NOT EXISTS (SELECT 1 FROM super_admin_accounts)");
 await connection.execute(
   "INSERT INTO users (id, name, email, password_hash, role) VALUES (?, ?, ?, ?, 'user') ON DUPLICATE KEY UPDATE name = VALUES(name)",
   [randomUUID(), "Demo User", "demo@example.com", userPassword]

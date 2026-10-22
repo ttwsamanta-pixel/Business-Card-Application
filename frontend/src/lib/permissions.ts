@@ -20,6 +20,7 @@ export type SessionUser = {
   role: string;
   profileImageUrl?: string;
   permissions?: string[];
+  isSuperAdmin?: boolean;
 };
 export function canAccess(user: SessionUser | undefined, key: string) {
   if (!user) return false;

@@ -7,6 +7,8 @@ import { uniqueSlug } from "./utils/slug.js";
 import { defaultMasters, type MasterItem } from './masters.js';
 
 export interface Store {
+  isSuperAdmin(id:string):Promise<boolean>;
+  getCardById(id:string):Promise<BusinessCard|undefined>;
   getPermissions(id:string):Promise<string[]|undefined>;
   setPermissions(id:string,permissions:string[]):Promise<void>;
   editUser(id:string,input:{name:string;email:string;role:Role;status:'active'|'disabled'}):Promise<void>;
@@ -69,6 +71,9 @@ function campaignActive(card:BusinessCard){
 export type CardFolder={id:string;name:string;createdAt:string;updatedAt:string};
 export type CardEvent={id:string;cardId:string;kind:'view'|'link'|'contact'|'form';visitor:string;createdAt:string;details:{url?:string;device?:string;browser?:string;country?:string;region?:string;city?:string;latitude?:number;longitude?:number}};
 export class MemoryStore implements Store {
+  private superAdminId?:string;
+  async isSuperAdmin(id:string){return this.superAdminId===id;}
+  async getCardById(id:string){return this.cards.get(id);}
   private permissions = new Map<string,string[]>();
   async getPermissions(id:string){return this.permissions.get(id);}
   async setPermissions(id:string,permissions:string[]){this.permissions.set(id,permissions);}
@@ -116,6 +121,7 @@ export class MemoryStore implements Store {
       createdAt: new Date().toISOString()
     };
     this.users.set(user.id, user);
+    if(!this.superAdminId && user.role==='admin' && user.email==='admin@example.com')this.superAdminId=user.id;
     return publicUser(user);
   }
 
@@ -260,6 +266,8 @@ export class MemoryStore implements Store {
 }
 
 export class MySqlStore extends MemoryStore {
+  async isSuperAdmin(id:string){const [rows]=await this.pool.execute<mysql.RowDataPacket[]>('SELECT user_id FROM super_admin_accounts WHERE user_id=?',[id]);return rows.length>0;}
+  async getCardById(id:string){const [rows]=await this.pool.execute<mysql.RowDataPacket[]>('SELECT * FROM business_cards WHERE id=? LIMIT 1',[id]);return rows[0]?this.rowToCard(rows[0]):undefined;}
   async getPermissions(id:string):Promise<string[]|undefined>{const [rows]=await this.pool.execute<mysql.RowDataPacket[]>('SELECT permissions FROM user_menu_permissions WHERE user_id=?',[id]);const value=rows[0]?.permissions;return typeof value==='string'?JSON.parse(value):value;}
   async setPermissions(id:string,permissions:string[]){await this.pool.execute('INSERT INTO user_menu_permissions(user_id,permissions) VALUES(?,?) ON DUPLICATE KEY UPDATE permissions=VALUES(permissions)',[id,JSON.stringify(permissions)]);}
   async editUser(id:string,input:{name:string;email:string;role:Role;status:'active'|'disabled'}){await this.pool.execute('UPDATE users SET name=?,email=?,role=?,status=? WHERE id=?',[input.name,input.email.toLowerCase(),input.role,input.status,id]);}
