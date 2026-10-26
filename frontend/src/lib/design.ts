@@ -12,7 +12,7 @@ export const fontSizes = [
   {
     key: "profileFontSize",
     label: "Designation and company",
-    defaultValue: 14,
+    defaultValue: 16,
     min: 12,
     max: 24,
     selectors: [
@@ -27,7 +27,7 @@ export const fontSizes = [
   {
     key: "headingFontSize",
     label: "Section headings",
-    defaultValue: 19,
+    defaultValue: 20,
     min: 14,
     max: 32,
     selectors: [".info-card h4", ".qr-card h4"],
@@ -35,7 +35,7 @@ export const fontSizes = [
   {
     key: "bodyFontSize",
     label: "Body and contact text",
-    defaultValue: 14,
+    defaultValue: 16,
     min: 12,
     max: 24,
     selectors: [

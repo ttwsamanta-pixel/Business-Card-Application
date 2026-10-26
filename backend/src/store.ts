@@ -211,6 +211,8 @@ export class MemoryStore implements Store {
       createdAt: now,
       updatedAt: now
     };
+    if ([...this.cards.values()].some(existing => existing.slug === card.slug))
+      throw Object.assign(new Error("This page URL is already in use. Choose another URL."), { code: "ER_DUP_ENTRY" });
     this.cards.set(card.id, card);
     return card;
   }
@@ -232,6 +234,8 @@ export class MemoryStore implements Store {
     const card = await this.getCardForUser(userId, id);
     if (!card) return undefined;
     const next = { ...card, ...data, socialLinks: data.socialLinks ?? card.socialLinks, updatedAt: new Date().toISOString() };
+    if ([...this.cards.values()].some(existing => existing.id !== id && existing.slug === next.slug))
+      throw Object.assign(new Error("This page URL is already in use. Choose another URL."), { code: "ER_DUP_ENTRY" });
     if (data.status === "published" && card.status !== "published") next.publishedAt = new Date().toISOString();
     this.cards.set(id, next);
     return next;

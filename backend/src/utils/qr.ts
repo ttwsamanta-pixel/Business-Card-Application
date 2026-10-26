@@ -48,7 +48,7 @@ export async function qrSvg(value: string, t: Theme = {}) {
     inset =
       (
         {
-          square: 36,
+          square: 0,
           rounded: 36,
           circle: 110,
           hexagon: 110,
@@ -56,7 +56,7 @@ export async function qrSvg(value: string, t: Theme = {}) {
           diamond: 160,
           shield: 130,
         } as Record<string, number>
-      )[shape] || 150,
+      )[shape] ?? 150,
     size = 640 - inset * 2,
     u = size / (n + 8),
     o = inset + 4 * u;
@@ -85,7 +85,7 @@ export async function qrSvg(value: string, t: Theme = {}) {
   const parts = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="${height}" viewBox="0 0 640 ${height}"><defs><linearGradient id="ink" x2="${t.qrGradientDirection === "vertical" ? "0" : "1"}" y2="1"><stop stop-color="${ink}"/><stop offset="1" stop-color="${color(t.qrGradientEnd, "#154085")}"/></linearGradient><filter id="shadow"><feDropShadow dx="0" dy="4" stdDeviation="3" flood-opacity=".25"/></filter></defs><rect width="640" height="${height}" fill="${bg}"/>`,
   ];
-  parts.push(
+  if (shape !== "square") parts.push(
     `<g fill="${bg}" stroke="${stroke}" stroke-width="6" ${t.qr3d === "true" ? 'filter="url(#shadow)"' : ""}>${outline}</g>`,
   );
   parts.push(`<defs><clipPath id="shape">${outline}</clipPath></defs>`);

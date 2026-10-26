@@ -36,6 +36,7 @@ function Editor() {
   const [uploads, setUploads] = useState(0);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [savedSlug, setSavedSlug] = useState("");
   const scroller = useRef<HTMLDivElement>(null);
   useEffect(() => {
     let active = true;
@@ -58,11 +59,13 @@ function Editor() {
               }
             : await endpoints.card(params.id);
         if(params.id==='new'&&!choices.some(t=>t.id===loaded.templateId))loaded.templateId=choices[0].id;
-        if (active)
+        if (active) {
+          setSavedSlug(loaded.slug || "");
           setCard({
             ...loaded,
             content: loaded.content || initialContent(loaded),
           });
+        }
       } catch (e) {
         if (active)
           setError(e instanceof Error ? e.message : "Unable to load card");
@@ -82,14 +85,21 @@ function Editor() {
     setUploads((count) => count + (value ? 1 : -1));
   const save = async (publish = false, returnToList = false) => {
     if (saving || uploads) return;
+    const slug = card.slug?.trim();
+    if ((card.id || slug) && (!slug || !/^[a-z0-9-]{3,160}$/.test(slug))) {
+      setError("Page URL must be 3 to 160 characters using lowercase letters, numbers, or hyphens.");
+      return;
+    }
+    if (card.id && savedSlug !== slug && !window.confirm("Changing the page URL will stop old links and downloaded QR codes from working. Continue and download a new QR code?")) return;
     setSaving(true);
     setError("");
     setMessage("");
     try {
       const saved = card.id
-        ? await endpoints.updateCard(card.id, card)
-        : await endpoints.createCard(card);
+        ? await endpoints.updateCard(card.id, { ...card, slug })
+        : await endpoints.createCard({ ...card, slug: slug || undefined });
       setCard(saved);
+      setSavedSlug(saved.slug || "");
       const result = publish ? await endpoints.publishCard(saved.id!) : saved;
       setCard(result);
       setMessage(publish ? "Card published." : "Draft saved.");
@@ -156,7 +166,10 @@ function Editor() {
                           aria-label="Page URL"
                           value={card.slug || ""}
                           placeholder="Assigned when saved"
-                          readOnly
+                          onChange={(e) => change({ slug: e.target.value })}
+                          maxLength={160}
+                          autoCapitalize="none"
+                          spellCheck={false}
                         />
                       </div>
                     </div>

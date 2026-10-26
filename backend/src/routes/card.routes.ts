@@ -22,7 +22,8 @@ cardRouter.param('id',async(req,res,next,id)=>{
   }catch(error){next(error);}
 });
 
-cardRouter.post("/", async (req, res) => {
+cardRouter.post("/", async (req, res, next) => {
+  try {
   const parsed = cardSchema.safeParse(req.body);
   if (!parsed.success)
     return fail(
@@ -42,6 +43,10 @@ cardRouter.post("/", async (req, res) => {
     slug: body.slug || uniqueSlug(body.fullName),
   });
   return ok(res, safeCard(card), 201);
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "ER_DUP_ENTRY") return fail(res, 409, "This page URL is already in use. Choose another URL.");
+    next(error);
+  }
 });
 
 cardRouter.get("/", async (req, res) =>
@@ -61,7 +66,8 @@ cardRouter.get("/:id/leads", async (req, res) => {
 });
 cardRouter.get('/:id/visits',async(req,res,next)=>{try{const card=await store.getCardForUser(res.locals.cardOwnerId,req.params.id);if(!card)return fail(res,404,'Card not found');return ok(res,await store.listVisits(card.id));}catch(e){next(e);}});
 
-cardRouter.put("/:id", async (req, res) => {
+cardRouter.put("/:id", async (req, res, next) => {
+  try {
   const parsed = cardPatchSchema.safeParse(req.body);
   if (!parsed.success)
     return fail(
@@ -81,6 +87,10 @@ cardRouter.put("/:id", async (req, res) => {
   const card = await store.updateCard(res.locals.cardOwnerId, req.params.id, body);
   if (!card) return fail(res, 404, "Card not found");
   return ok(res, safeCard(card));
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "ER_DUP_ENTRY") return fail(res, 409, "This page URL is already in use. Choose another URL.");
+    next(error);
+  }
 });
 
 cardRouter.post("/:id/duplicate", async (req, res) => {

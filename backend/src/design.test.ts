@@ -3,7 +3,7 @@ import { describe, it, expect } from "vitest";
 import sharp from "sharp";
 import jsQR from "jsqr";
 import { app } from "./app.js";
-import { qrPngDataUrl } from "./utils/qr.js";
+import { qrPngDataUrl, qrSvg } from "./utils/qr.js";
 import { store } from "./store.js";
 const decode = jsQR as unknown as (
   data: Uint8ClampedArray,
@@ -11,6 +11,42 @@ const decode = jsQR as unknown as (
   height: number,
 ) => { data: string } | null;
 describe("card design and access", () => {
+  it("exports square QR codes without an outer frame and keeps them scannable", async () => {
+    const url = "https://qr.travel2globe.com/card/readable-card";
+    expect(await qrSvg(url)).not.toContain('stroke-width="6"');
+    const png = await qrPngDataUrl(url, {}, 640);
+    const { data, info } = await sharp(Buffer.from(png.split(",")[1], "base64"))
+      .ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    for (let x = 0; x < info.width; x++) {
+      const offset = (12 * info.width + x) * 4;
+      expect([...data.subarray(offset, offset + 4)]).toEqual([255, 255, 255, 255]);
+    }
+    expect(decode(new Uint8ClampedArray(data), info.width, info.height)?.data).toBe(url);
+  });
+  it("renames saved URLs, rejects duplicates and invalid slugs, and preserves ownership", async () => {
+    const registered = await request(app).post("/api/auth/register").send({
+      name: "URL Editor", email: "url-editor@example.test", password: "Password123!",
+    });
+    const auth = { Authorization: `Bearer ${registered.body.data.token}` };
+    const created = await request(app).post("/api/cards").set(auth).send({ templateId: "signature-classic", fullName: "Asha Rao", slug: "url-original" });
+    const c = created.body.data;
+    await request(app).post(`/api/cards/${c.id}/publish`).set(auth);
+    const updated = await request(app).put(`/api/cards/${c.id}`).set(auth).send({ slug: "url-renamed" });
+    expect(updated.status).toBe(200);
+    expect(updated.body.data.userId).toBe(c.userId);
+    expect((await request(app).get("/api/public/cards/url-original")).status).toBe(404);
+    expect((await request(app).get("/api/public/cards/url-renamed")).body.data.id).toBe(c.id);
+    const qr = await request(app).get(`/api/cards/${c.id}/qr.png`).set(auth);
+    const { data, info } = await sharp(qr.body).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    expect(decode(new Uint8ClampedArray(data), info.width, info.height)?.data).toContain("/card/url-renamed");
+    const other = await request(app).post("/api/cards").set(auth).send({ templateId: "signature-classic", fullName: "Another Card", slug: "url-taken" });
+    expect((await request(app).put(`/api/cards/${c.id}`).set(auth).send({ slug: "url-taken" })).status).toBe(409);
+    expect((await request(app).post("/api/cards").set(auth).send({ templateId: "signature-classic", fullName: "Duplicate URL", slug: "url-taken" })).status).toBe(409);
+    for (const slug of ["", "ab", "../bad", "Bad URL", "x".repeat(161)])
+      expect((await request(app).put(`/api/cards/${c.id}`).set(auth).send({ slug })).status).toBe(422);
+    expect((await request(app).get(`/api/cards/${c.id}`).set(auth)).body.data.slug).toBe("url-renamed");
+    expect(other.status).toBe(201);
+  });
   it("preserves manual font sizes when saving and publishing cards", async () => {
     const owner = await request(app).post("/api/auth/register").send({
       name: "Font Editor",
