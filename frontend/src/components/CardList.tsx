@@ -35,6 +35,7 @@ import type { CardProfile } from "@/lib/templates";
 import { canAccess, type SessionUser } from '@/lib/permissions';
 export function CardList({ overview = false }: { overview?: boolean }) {
   const [user,setUser]=useState<SessionUser>();
+  const canManage = (card: CardProfile) => !!user?.isSuperAdmin || card.ownedByMe !== false;
   useEffect(()=>{endpoints.me().then(r=>setUser(r.user)).catch(()=>{});},[]);
   const [data, setData] = useState<Management>({
     cards: [],
@@ -304,8 +305,8 @@ export function CardList({ overview = false }: { overview?: boolean }) {
                       type="checkbox"
                       aria-label="Select page"
                       checked={
-                        rows.some(c=>c.ownedByMe!==false) &&
-                        rows.filter(c=>c.ownedByMe!==false).every((c) => selected.includes(c.id!))
+                        rows.some(canManage) &&
+                        rows.filter(canManage).every((c) => selected.includes(c.id!))
                       }
                       onChange={(e) =>
                         setSelected(
@@ -313,7 +314,7 @@ export function CardList({ overview = false }: { overview?: boolean }) {
                             ? Array.from(
                                 new Set([
                                   ...selected,
-                                  ...rows.filter(c=>c.ownedByMe!==false).map((c) => c.id!),
+                                  ...rows.filter(canManage).map((c) => c.id!),
                                 ]),
                               )
                             : selected.filter(
@@ -338,7 +339,7 @@ export function CardList({ overview = false }: { overview?: boolean }) {
                       <input
                         type="checkbox"
                         aria-label={`Select ${card.fullName}`}
-                        disabled={card.ownedByMe===false}
+                        disabled={!canManage(card)}
                         checked={selected.includes(card.id!)}
                         onChange={(e) =>
                           setSelected(
@@ -413,7 +414,7 @@ export function CardList({ overview = false }: { overview?: boolean }) {
                           Edit
                         </Link>
                         <button
-                          disabled={busy||card.ownedByMe===false}
+                          disabled={busy||!canManage(card)}
                           onClick={() =>
                             act(
                               () => endpoints.duplicateCard(card.id!),
@@ -425,7 +426,7 @@ export function CardList({ overview = false }: { overview?: boolean }) {
                           Duplicate
                         </button>
                         <button
-                          disabled={busy||!canAccess(user,'folders')||card.ownedByMe===false}
+                          disabled={busy||!canAccess(user,'folders')||!canManage(card)}
                           onClick={() => {
                             setMove([card.id!]);
                             setDestination(card.folderId || "");
@@ -454,7 +455,7 @@ export function CardList({ overview = false }: { overview?: boolean }) {
                           Email Signature
                         </button>
                         <button
-                          disabled={busy||card.ownedByMe===false}
+                          disabled={busy||!canManage(card)}
                           onClick={() => {
                             if (confirm(`Delete ${card.fullName} permanently?`))
                               void act(
@@ -543,7 +544,10 @@ export function CardList({ overview = false }: { overview?: boolean }) {
                 onChange={(e) => setDestination(e.target.value)}
               >
                 <option value="">Unfiled</option>
-                {data.folders.filter(f=>!f.userId||f.userId===user?.id).map((f) => (
+                {data.folders.filter(f=>move.every(id=>{
+                  const card=data.cards.find(c=>c.id===id);
+                  return card && (card.userId || user?.id) === f.userId;
+                })).map((f) => (
                   <option key={f.id} value={f.id}>
                     {f.name}
                   </option>

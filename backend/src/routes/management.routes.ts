@@ -6,7 +6,7 @@ import { store } from "../store.js";
 import { safeCard } from "../utils/card-access.js";
 import { summarize } from "../utils/analytics.js";
 import { ok, fail } from "../utils/http.js";
-import { accessibleCard, managementScope } from '../utils/owner-scope.js';
+import { accessibleCard, managementScope, visibleCards } from '../utils/owner-scope.js';
 export const managementRouter = Router();
 managementRouter.use(authenticate);
 managementRouter.put("/cards/:id/campaign", async (req, res, next) => {
@@ -199,14 +199,16 @@ managementRouter.put("/folders", async (req, res, next) => {
       .safeParse(req.body);
     if (!parsed.success) return fail(res, 422, "Invalid folder assignment");
     const { cardIds, folderId } = parsed.data,
-      cards = await store.listCards(req.user!.id);
+      cards = await visibleCards(req.user!);
     if (cardIds.some((id) => !cards.some((c) => c.id === id)))
       return fail(res, 404, "Card not found");
-    if (
-      folderId &&
-      !(await store.listFolders(req.user!.id)).some((f) => f.id === folderId)
-    )
-      return fail(res, 404, "Folder not found");
+    const owners = new Set(cards.filter(c => cardIds.includes(c.id)).map(c => c.userId));
+    if (folderId) {
+      if (owners.size !== 1) return fail(res, 422, "Select cards from one creator to move them into a folder.");
+      const ownerId = [...owners][0];
+      if (!(await store.listFolders(ownerId)).some(f => f.id === folderId))
+        return fail(res, 404, "Choose a folder belonging to the card creator.");
+    }
     for (const id of cardIds) await store.assignFolder(id, folderId);
     return ok(res, { updated: true });
   } catch (e) {

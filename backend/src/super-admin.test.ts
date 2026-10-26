@@ -99,11 +99,30 @@ it("allows only designated Super Admin to see and update all owners cards", asyn
           .send({ fullName: "Denied" })
       ).status,
     ).toBe(404);
+    expect((await request(app).post(`/api/cards/${other.id}/duplicate`).set(auth(actor.id))).status).toBe(404);
+    expect((await request(app).delete(`/api/cards/${other.id}`).set(auth(actor.id))).status).toBe(404);
+    expect((await request(app).put('/api/management/folders').set(auth(actor.id)).send({cardIds:[other.id],folderId:null})).status).toBe(404);
   }
+  const duplicate = await request(app).post(`/api/cards/${first.id}/duplicate`).set(auth(root.id));
+  expect(duplicate.status).toBe(201);
+  expect(duplicate.body.data).toMatchObject({userId:member.id,status:'draft',fullName:'Edited by Super Admin Copy'});
+  expect(duplicate.body.data.slug).not.toBe(first.slug);
+  expect((await store.getCardForUser(member.id,first.id))?.status).toBe('published');
+  const folder = await request(app).post('/api/management/folders').set(auth(member.id)).send({name:'Member folder'});
+  const otherFolder = await request(app).post('/api/management/folders').set(auth(admin.id)).send({name:'Admin folder'});
+  const ids=[first.id,duplicate.body.data.id];
+  expect((await request(app).put('/api/management/folders').set(auth(root.id)).send({cardIds:ids,folderId:folder.body.data.id})).status).toBe(200);
+  expect((await store.folderMembers(member.id)).filter(m=>m.folderId===folder.body.data.id)).toHaveLength(2);
+  expect((await request(app).put('/api/management/folders').set(auth(root.id)).send({cardIds:ids,folderId:otherFolder.body.data.id})).status).toBe(404);
+  expect((await request(app).put('/api/management/folders').set(auth(root.id)).send({cardIds:[first.id,second.id],folderId:folder.body.data.id})).status).toBe(422);
+  expect((await store.folderMembers(member.id)).filter(m=>m.folderId===folder.body.data.id)).toHaveLength(2);
+  expect((await request(app).put('/api/management/folders').set(auth(root.id)).send({cardIds:[first.id,second.id],folderId:null})).status).toBe(200);
+  expect((await request(app).delete(`/api/cards/${duplicate.body.data.id}`).set(auth(root.id))).status).toBe(200);
   expect(
     (await request(app).delete(`/api/cards/${first.id}`).set(auth(root.id)))
       .status,
-  ).toBe(404);
+  ).toBe(200);
+  expect(await store.getCardById(first.id)).toBeUndefined();
   expect(
     (
       await request(app)

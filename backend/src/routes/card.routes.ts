@@ -94,7 +94,7 @@ cardRouter.put("/:id", async (req, res, next) => {
 });
 
 cardRouter.post("/:id/duplicate", async (req, res) => {
-  const card = await store.duplicateCard(req.user!.id, req.params.id);
+  const card = await store.duplicateCard(res.locals.cardOwnerId, req.params.id);
   if (!card) return fail(res, 404, "Card not found");
   return ok(res, safeCard(card), 201);
 });
@@ -124,7 +124,7 @@ cardRouter.post("/:id/unpublish", async (req, res) => {
 });
 
 cardRouter.delete("/:id", async (req, res) => {
-  const deleted = await store.deleteCard(req.user!.id, req.params.id);
+  const deleted = await store.deleteCard(res.locals.cardOwnerId, req.params.id);
   if (!deleted) return fail(res, 404, "Card not found");
   return ok(res, { deleted: true });
 });

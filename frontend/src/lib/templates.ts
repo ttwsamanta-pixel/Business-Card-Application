@@ -1,5 +1,6 @@
 export type SocialLink = { id?: string; platform: string; url: string };
 export type CardProfile = {
+  userId?: string;
   ownerName?: string;
   ownerEmail?: string;
   ownedByMe?: boolean;
