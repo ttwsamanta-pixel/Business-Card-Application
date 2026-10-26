@@ -91,6 +91,11 @@ jobs:
             . "$NVM_DIR/nvm.sh"
             nvm use 22
 
+            # Global tools are installed separately for each NVM Node version.
+            if ! command -v pm2 >/dev/null 2>&1; then
+              npm install --global pm2@7.0.4 --no-audit --no-fund
+            fi
+
             cd "${{ secrets.CLOUDWAYS_APP_PATH }}"
             npm ci
             npm run build
