@@ -134,6 +134,15 @@
   width: 28px;
   height: 28px;
 }
+.business-card .website-link-row {
+  align-items: center;
+  justify-content: flex-start;
+}
+.business-card .website-link-row > span:not(.master-icon) {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .master-icon.small svg {
   width: 16px;
   height: 16px;

@@ -458,13 +458,15 @@ export function ContentSections({
                         className={
                           section.type === "social"
                             ? "social-link-row"
-                            : "link-row"
+                            : section.type === "links"
+                              ? "link-row website-link-row"
+                              : "link-row"
                         }
                         href={href}
                         target="_blank"
                         rel="noreferrer"
                       >
-                        {section.type === "social" ? (
+                        {section.type === "social" || section.type === "links" ? (
                           <MasterIcon
                             name={String(x.iconKey || x.platform || "globe")}
                             url={String(x.icon || "")}
@@ -477,7 +479,11 @@ export function ContentSections({
                           />
                         ) : null}
                         <span>
-                          {String(x.title || x.platform || x.url)}
+                          {String(
+                            section.type === "links"
+                              ? x.url
+                              : x.title || x.platform || x.url,
+                          )}
                           {x.showSubtitle !== false ? (
                             <small>
                               {String(
