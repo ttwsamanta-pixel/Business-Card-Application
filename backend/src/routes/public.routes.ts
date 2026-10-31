@@ -94,7 +94,17 @@ publicRouter.get("/cards/:slug", async (req, res) => {
   if (!card) return fail(res, 404, "Published card not found");
   res.setHeader('Cache-Control','private, no-store');
   if(!canReadCard(req,card))return ok(res,passcodePrompt(card));
-  return ok(res, safeCard(card));
+  const masters = await store.listMasters();
+  const content = card.content?.map(section => section.type !== 'links' ? section : {
+    ...section,
+    items: section.items.map(item => {
+      const values = item.values;
+      const master = masters.find(m => m.category === 'links' && m.id === values.masterId)
+        || masters.find(m => m.category === 'links' && (m.label === values.title || m.label === values.platform));
+      return { ...item, values: { ...values, icon: values.icon || master?.iconUrl || '' } };
+    }),
+  });
+  return ok(res, safeCard({ ...card, content }));
 });
 
 publicRouter.get("/cards/:slug/qr.png", async (req, res) => {

@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { MasterIcon } from "./MasterIcon";
+import { selectedMaster, useMasters } from "@/lib/masters";
 import { api } from "@/lib/api";
 import { safeLink, type ContentSection } from "@/lib/card-content";
 import { templateFor, type CardProfile } from "@/lib/templates";
@@ -221,6 +222,7 @@ export function ContentSections({
   publicMode: boolean;
 }) {
   const template = templateFor(card.templateId);
+  const { items: masters } = useMasters();
   return (
     <>
       {card.content
@@ -452,6 +454,9 @@ export function ContentSections({
                   {section.items.map((i) => {
                     const x = i.values;
                     const href = safeLink(String(x.url || ""));
+                    const linkMaster = section.type === "links"
+                      ? selectedMaster(masters, "links", x)
+                      : undefined;
                     return href ? (
                       <a
                         key={i.id}
@@ -469,7 +474,7 @@ export function ContentSections({
                         {section.type === "social" || section.type === "links" ? (
                           <MasterIcon
                             name={String(x.iconKey || x.platform || "globe")}
-                            url={String(x.icon || "")}
+                            url={String(x.icon || linkMaster?.iconUrl || "")}
                           />
                         ) : x.icon ? (
                           <img
